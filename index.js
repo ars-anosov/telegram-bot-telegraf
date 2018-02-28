@@ -1,17 +1,14 @@
-var nodePath = process.argv[0];
-var appPath = process.argv[1];
-var token = process.argv[2];
+var nodePath      = process.argv[0]
+var appPath       = process.argv[1]
+var token         = process.argv[2]
  
-console.log("token: " + token);
+console.log("token: " + token)
 
 
-
-const Telegraf = require('telegraf')
-var fs = require('fs'),
-    path = require('path')
-
-
-const bot = new Telegraf(token)
+const fs          = require('fs')
+const path        = require('path')
+const Telegraf    = require('telegraf')
+const bot         = new Telegraf(token)
 
 
 
@@ -34,12 +31,12 @@ const tlsOptions = {
 }
 
 // Set telegram webhook (upload cert)
-bot.telegram.setWebhook('https://89.188.160.102:8443/xxx', {
+bot.telegram.setWebhook('https://89.188.160.102:8443/'+token, {
   source: fs.readFileSync( path.join(__dirname, 'cert/client.pem') )
 })
 
 // Start https webhook
-bot.startWebhook('/xxx', tlsOptions, 8443)
+bot.startWebhook('/'+token, tlsOptions, 8443)
 
 
 
@@ -51,8 +48,8 @@ bot.startWebhook('/xxx', tlsOptions, 8443)
 
 
 bot.on('message', (ctx) =>  {
-  console.log(ctx.message)
-  return ctx.reply('Hey there!')
+  console.log(ctx)
+  return ctx.reply('ДомОнлайн тут!')
 })
 
 
@@ -61,36 +58,14 @@ bot.on('message', (ctx) =>  {
 
 
 
+
 /*
-# Пара для сервера
-https://core.telegram.org/bots/self-signed
-
-openssl req -newkey rsa:2048 -sha256 -nodes -keyout server-key.key -x509 -days 10950 -out server-cert.pem -subj "/C=RU/ST=Moscow/L=Moscow/O=Test Company/CN=89.188.160.102"
-
-
-  # Всякое для CA
-  http://blog.regolit.com/2010/02/16/personal-ca-and-self-signed-certificates
-
-  # CA
-  openssl genrsa -out ca.key 2048
-  openssl req -new -x509 -days 10950 -key ca.key -out ca.crt -subj "/C=RU/ST=Moscow/L=Moscow/O=Test Company/CN=89.188.160.102"
-  openssl x509 -in ca.crt -out ca.pem -outform PEM
-
-  # новый ключ клиента
-  openssl genrsa -out client.key 2048
-
-  # запрос на подпись certificate signing request (csr)
-  openssl req -new -key client.key -out client.csr -subj "/C=RU/ST=Moscow/L=Moscow/O=Test Company/CN=89.188.160.102"
-
-  # отправляем в CA на подпись
-  openssl x509 -req -days 10950 -CA ca.crt -CAkey ca.key -set_serial 01 -in client.csr -out client.crt 
-  openssl x509 -in client.crt -out client.pem -outform PEM
-
-
-# На ручнике
+# Запросы руками
 https://core.telegram.org/bots/webhooks
+https://core.telegram.org/bots/api
 
 https://api.telegram.org/bot<INSERT_TOKEN_HERE>/getMe
+https://api.telegram.org/bot<INSERT_TOKEN_HERE>/getWebhookInfo
 
 curl --tlsv1 -v -k https://89.188.160.102:8443/
 
