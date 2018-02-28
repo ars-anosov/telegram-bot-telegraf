@@ -1,9 +1,8 @@
 var nodePath      = process.argv[0]
 var appPath       = process.argv[1]
 var token         = process.argv[2]
- 
-console.log("token: " + token)
-
+var whIp          = process.argv[3]
+var whPort        = process.argv[4]
 
 const fs          = require('fs')
 const path        = require('path')
@@ -31,12 +30,13 @@ const tlsOptions = {
 }
 
 // Set telegram webhook (upload cert)
-bot.telegram.setWebhook('https://89.188.160.102:8443/'+token, {
+console.log('https://'+whIp+':'+whPort+'/'+token)
+bot.telegram.setWebhook('https://'+whIp+':'+whPort+'/'+token, {
   source: fs.readFileSync( path.join(__dirname, 'cert/client.pem') )
 })
 
 // Start https webhook
-bot.startWebhook('/'+token, tlsOptions, 8443)
+bot.startWebhook('/'+token, tlsOptions, whPort)
 
 
 
@@ -68,8 +68,5 @@ https://api.telegram.org/bot<INSERT_TOKEN_HERE>/getMe
 https://api.telegram.org/bot<INSERT_TOKEN_HERE>/getWebhookInfo
 
 curl --tlsv1 -v -k https://89.188.160.102:8443/
-
-curl -F "url=https://89.188.160.102:8443/xxx" \
-     -F "certificate=@cert/client.pem" \
-    https://api.telegram.org/bot<INSERT_TOKEN_HERE>/setWebhook
+curl -F "url=https://89.188.160.102:8443/xxx" -F "certificate=@cert/client.pem" https://api.telegram.org/bot<INSERT_TOKEN_HERE>/setWebhook
 */

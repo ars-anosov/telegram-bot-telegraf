@@ -19,8 +19,6 @@ sudo docker run \
   -w /telegram-bot-telegraf \
   --publish=8443:8443 \
   --env="TOKEN=INSERT_TOKEN_HERE" \
-  --env="WH_URL=https://89.188.160.102" \
-  --env="WH_S_PATH=INSERT_PATH_HERE" \
   -it \
   node:8 bash
 ```
@@ -52,7 +50,7 @@ gulp deploy
 На рабочей машине:
 ```
 npm install
-node index.js BOT_TOKEN_HERE
+node index.js $TOKEN 89.188.160.102 8443
 ```
 
 Бот общается с api.telegram.org по шифрованому SSL-каналу. Перед первым запуском создаем самоподписные сертификаты.
