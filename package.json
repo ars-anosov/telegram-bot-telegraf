@@ -4,14 +4,17 @@
   "description": "telegram by telegraf",
   "main": "index.js",
   "dependencies": {
-    "gulp": "^3.9.1",
-    "gulp-if": "^2.0.2",
-    "gulp-rsync": "^0.0.8",
-    "gulp-util": "^3.0.8",
-    "rimraf": "^2.6.2",
+    "express": "^4.16.2",
     "telegraf": "^3.18.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "gulp": "^3.9.1",
+    "gulp-cli": "^2.0.1",
+    "gulp-if": "^2.0.2",
+    "gulp-rsync": "0.0.8",
+    "gulp-util": "^3.0.8",
+    "rimraf": "^2.6.2"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -20,7 +23,7 @@
     "url": "git+https://github.com/ars-anosov/telegram-bot-telegraf.git"
   },
   "keywords": [
-    "telegram"
+    "telegram bot"
   ],
   "author": "Arseniy Anosov",
   "license": "ISC",

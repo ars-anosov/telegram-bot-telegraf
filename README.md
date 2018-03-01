@@ -23,13 +23,44 @@ sudo docker run \
   node:8 bash
 ```
 
+Бот общается с api.telegram.org по шифрованому SSL-каналу. В контейнере создаем самоподписные сертификаты.
+```
+mkdir cert && cd cert
+```
+
+Офф. документация - https://core.telegram.org/bots/self-signed (не делал)
+```
+openssl req -newkey rsa:2048 -sha256 -nodes -keyout client-key.key -x509 -days 10950 -out client-cert.pem -subj "/C=RU/ST=Moscow/L=Moscow/O=Test Company/CN=89.188.160.102"
+```
+
+Я создавал PKI x.509 по порядку
+
+### CA (Certification Authority)
+```
+openssl genrsa -out ca.key 4096
+openssl req -new -x509 -days 10950 -key ca.key -out ca.pem -outform PEM -subj "/C=RU/ST=Moscow/L=Moscow/O=Ars DevOps/CN=89.188.160.102"
+```
+
+### Ключи для телеграм-бота
+1. закрытый ".key"
+```
+openssl genrsa -out client.key 4096
+```
+2. запрос на подпись ".csr" (certificate signing request)
+```
+openssl req -new -key client.key -out client.csr -subj "/C=RU/ST=Moscow/L=Moscow/O=Ars DevOps/CN=89.188.160.102"
+```
+3. подписанный сертификат ".pem"
+```
+openssl x509 -req -days 10950 -CA ca.pem -CAkey ca.key -set_serial 01 -in client.csr -out client.pem -outform PEM 
+```
+
 ## Deploy
 
 Деплой делаем через gulp утилитой rsync.
 ```
 # gulp tools
-npm install -g gulp-cli
-npm install --save gulp rimraf gulp-rsync gulp-if gulp-util
+npm install --save-dev gulp-cli gulp rimraf gulp-rsync gulp-if gulp-util
 
 # system rsync
 apt update
@@ -47,40 +78,25 @@ gulp deploy
 
 ## Запуск бота
 
-На рабочей машине:
+На production машине:
 ```
 npm install
 node index.js $TOKEN 89.188.160.102 8443
 ```
 
-Бот общается с api.telegram.org по шифрованому SSL-каналу. Перед первым запуском создаем самоподписные сертификаты.
+
+## Всякое
+- [webhooks](https://core.telegram.org/bots/webhooks)
+- [telegram API](https://core.telegram.org/bots/api)
+
+Проверить бота на api.telegram.org
 ```
-mkdir cert && cd cert
+https://api.telegram.org/bot<INSERT_TOKEN_HERE>/getMe
+https://api.telegram.org/bot<INSERT_TOKEN_HERE>/getWebhookInfo
 ```
 
-Офф. документация - https://core.telegram.org/bots/self-signed (не делал)
+Пара "ручных" запросов
 ```
-openssl req -newkey rsa:2048 -sha256 -nodes -keyout client.key -x509 -days 10950 -out client.pem -subj "/C=RU/ST=Moscow/L=Moscow/O=Test Company/CN=89.188.160.102"
-```
-
-Я создавал PKI x.509 руками по порядку
-
-### CA (Certification Authority)
-```
-openssl genrsa -out ca.key 4096
-openssl req -new -x509 -days 10950 -key ca.key -out ca.pem -outform PEM -subj "/C=RU/ST=Moscow/L=Moscow/O=DomOnlain/CN=89.188.160.102"
-```
-
-### Ключи для телеграм-бота
-1. закрытый ".key"
-```
-openssl genrsa -out client.key 4096
-```
-2. запрос на подпись ".csr" (certificate signing request)
-```
-openssl req -new -key client.key -out client.csr -subj "/C=RU/ST=Moscow/L=Moscow/O=DomOnlain/CN=89.188.160.102"
-```
-3. подписанный сертификат ".pem"
-```
-openssl x509 -req -days 10950 -CA ca.pem -CAkey ca.key -set_serial 01 -in client.csr -out client.pem -outform PEM 
+curl -v -k https://89.188.160.102:8443/
+curl -F "url=https://89.188.160.102:8443/<INSERT_TOKEN_HERE>" -F "certificate=@cert/client.pem" https://api.telegram.org/bot<INSERT_TOKEN_HERE>/setWebhook
 ```
