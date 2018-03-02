@@ -9,7 +9,13 @@ Telegram bot на базе фреймворка [telegraf](https://github.com/te
 
 ## Установка / Использование
 
-Собираю в Docker-контейнере, дальше деплой на машину IP=89.188.160.102.
+### Окружение
+Работал в следующем окружении (для себя правим на нужные IP):
+
+- **Docker-контейнер** - NodeJS v.9 для разработки.
+- **89.188.160.102** - pruduction машина. Доступна по **HTTPS**. Деплой утилитой **rsync**.
+
+Поддерживаемые TCP-порты: 443, 80, 88, 8443 (см. [офф.док.](https://core.telegram.org/bots/api) метод "setWebhook").
 ```
 cd telegram-bot-telegraf
 
@@ -18,49 +24,77 @@ sudo docker run \
   -v $PWD:/telegram-bot-telegraf \
   -w /telegram-bot-telegraf \
   --publish=8443:8443 \
-  --env="TOKEN=INSERT_TOKEN_HERE" \
+  --env="TOKEN=INSERT_BOT_TOKEN_HERE" \
   -it \
-  node:8 bash
+  node:9 bash
 ```
 
-Бот общается с api.telegram.org по шифрованому SSL-каналу. В контейнере создаем самоподписные сертификаты.
+Дальше все действия в контейнере. Выскочить из контейнера : Ctrl+P+Q
+
+
+
+## TLS сертификаты
+
+Webhook работает по шифрованому TLS-каналу. Складываем сертификаты в директорию "cert". В контейнере свои, на production-машине свои.
 ```
 mkdir cert && cd cert
 ```
 
-Офф. документация - https://core.telegram.org/bots/self-signed (не делал)
-```
-openssl req -newkey rsa:2048 -sha256 -nodes -keyout client-key.key -x509 -days 10950 -out client-cert.pem -subj "/C=RU/ST=Moscow/L=Moscow/O=Test Company/CN=89.188.160.102"
-```
+Использую самоподписные сертификаты.
 
-Я создавал PKI x.509 по порядку
+Офф. документация - https://core.telegram.org/bots/self-signed (не делал).
+
+Ниже CN=89.188.160.102 меняем на свой внешний IP. Созадем x.509 PKI по порядку:
 
 ### CA (Certification Authority)
 ```
 openssl genrsa -out ca.key 4096
-openssl req -new -x509 -days 10950 -key ca.key -out ca.pem -outform PEM -subj "/C=RU/ST=Moscow/L=Moscow/O=Ars DevOps/CN=89.188.160.102"
+
+openssl req -new -x509 -days 10950 -key ca.key -out ca.pem -outform PEM \
+        -subj "/C=RU/ST=Moscow/L=Moscow/O=Ars DevOps/CN=89.188.160.102"
 ```
 
 ### Ключи для телеграм-бота
-1. закрытый ".key"
+закрытый ".key"
 ```
 openssl genrsa -out client.key 4096
 ```
-2. запрос на подпись ".csr" (certificate signing request)
+запрос на подпись ".csr" (certificate signing request)
 ```
-openssl req -new -key client.key -out client.csr -subj "/C=RU/ST=Moscow/L=Moscow/O=Ars DevOps/CN=89.188.160.102"
+openssl req -new -key client.key -out client.csr \
+        -subj "/C=RU/ST=Moscow/L=Moscow/O=Ars DevOps/CN=89.188.160.102"
 ```
-3. подписанный сертификат ".pem"
+подписанный сертификат ".pem"
 ```
-openssl x509 -req -days 10950 -CA ca.pem -CAkey ca.key -set_serial 01 -in client.csr -out client.pem -outform PEM 
+openssl x509 -req -days 10950 -CA ca.pem -CAkey ca.key -set_serial 01 \
+        -in client.csr -out client.pem -outform PEM 
 ```
+
+
+
+## Запуск бота
+
+В контейнере - не забыть сделать port redirect с реального IP. Запускаем:
+```
+npm install
+node index.js $TOKEN <MY_EXTERNAL_IP> 8443
+```
+
+На production машине:
+```
+npm install
+node index.js <INSERT_BOT_TOKEN_HERE> 89.188.160.102 8443
+```
+
+
 
 ## Deploy
 
 Деплой делаем через gulp утилитой rsync.
 ```
 # gulp tools
-npm install --save-dev gulp-cli gulp rimraf gulp-rsync gulp-if gulp-util
+npm install -g gulp-cli gulp rimraf gulp-rsync gulp-if gulp-util
+npm link                gulp rimraf gulp-rsync gulp-if gulp-util
 
 # system rsync
 apt update
@@ -74,29 +108,26 @@ ssh -t arseny@89.188.160.102 'cat id_rsa.pub >> ~/.ssh/authorized_keys'
 # Deploy
 gulp deploy
 ```
-Выскочить из контейнера : Ctrl+P+Q
 
-## Запуск бота
-
-На production машине:
-```
-npm install
-node index.js $TOKEN 89.188.160.102 8443
-```
 
 
 ## Всякое
 - [webhooks](https://core.telegram.org/bots/webhooks)
 - [telegram API](https://core.telegram.org/bots/api)
 
-Проверить бота на api.telegram.org
+Состояние бота через браузер на api.telegram.org
 ```
-https://api.telegram.org/bot<INSERT_TOKEN_HERE>/getMe
-https://api.telegram.org/bot<INSERT_TOKEN_HERE>/getWebhookInfo
+https://api.telegram.org/bot<INSERT_BOT_TOKEN_HERE>/getMe
+https://api.telegram.org/bot<INSERT_BOT_TOKEN_HERE>/getWebhookInfo
 ```
 
 Пара "ручных" запросов
 ```
+# запрос к боту
 curl -v -k https://89.188.160.102:8443/
-curl -F "url=https://89.188.160.102:8443/<INSERT_TOKEN_HERE>" -F "certificate=@cert/client.pem" https://api.telegram.org/bot<INSERT_TOKEN_HERE>/setWebhook
+
+# установить webhook
+curl -F "url=https://89.188.160.102:8443/<INSERT_BOT_TOKEN_HERE>" \
+     -F "certificate=@cert/client.pem" \
+     https://api.telegram.org/bot<INSERT_BOT_TOKEN_HERE>/setWebhook
 ```
