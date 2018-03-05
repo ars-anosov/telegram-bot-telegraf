@@ -59,25 +59,137 @@ httpsServer.listen(whPort, () => {
 //----------------------------------------------------------------------------|
 //                                    bot                                     |
 //----------------------------------------------------------------------------|
-const Router = require('telegraf/router')
+
+// context extend ------------------------------------------------------------
+bot.context.localDb = [
+
+]
+
+
+//const Router = require('telegraf/router')
 const session = require('telegraf/session')
-const Extra = require('telegraf/extra')
+//const Extra = require('telegraf/extra')
 const Markup = require('telegraf/markup')
+//
+//const Stage = require('telegraf/stage')
+//const Scene = require('telegraf/scenes/base')
+//const { enter, leave } = Stage
 
-const Stage = require('telegraf/stage')
-const Scene = require('telegraf/scenes/base')
-const { enter, leave } = Stage
 
-// Register logger middleware
-bot.use((ctx, next) => {
+
+
+// middleware ----------------------------------------------------------------
+
+// timer
+bot.use(async (ctx, next) => {
   const start = new Date()
-  return next().then(() => {
-    const ms = new Date() - start
-    console.log('response time %sms', ms)
-  })
+  await next()
+  const ms = new Date() - start
+  console.log('Response time %sms', ms)
 })
 
-bot.on('message', (ctx) =>  {
-  console.log(ctx.message)
-  return ctx.reply('Принято!')
+// Naive authorization middleware
+bot.use((ctx, next) => {
+  ctx.state.role = false
+  ctx.localDb.map( (row, i) => {
+    if (row.id === ctx.message.from.id) { ctx.state.role = row }
+  })
+  return next()
 })
+
+// session
+bot.use(session())
+
+
+
+
+
+
+const request = require('request');
+var reqOptions = {  
+  url:      'http://xn--80ahqgegdcb.xn--p1ai/newtest.php',
+  method:   'POST',
+  encoding: 'utf8'
+}
+
+
+
+
+/*
+Я абонент домонлан.рф
+
+  Введите свой ID (числовое значение, полученное Вами при включении)
+  
+  Поздравляем! Вы подписались на домонлайн.рф.
+  Используйте /off чтобы приостановить подписку.
+
+  Ваша подписка деактивирована.
+  Вы всегда можете включить ее снова с помощью команды /on.
+
+Я хочу стать абонентом домонлайн.рф
+*/
+
+// curl -d "request_type=SRGP_API_DOG_BALANCE&dog_id=01234513042017" -H "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" -X POST http://xn--80ahqgegdcb.xn--p1ai/newtest.php
+
+const l1_1        = '\u26F3 Я абонент домонлайн.рф'
+const l1_2        = '\u26F9 Я хочу стать абонентом'
+const l1_1_l2_1   = 'Проверить баланс'
+
+
+bot.start((ctx) => {
+  ctx.reply(
+    'Поздравляем '+ctx.message.from.username+'! Вы подписались на домонлайн.рф.\nИспользуйте /off чтобы приостановить подписку.',
+    Markup
+    .keyboard([
+      [l1_1, l1_2]
+    ])
+    .oneTime()
+    .resize()
+    .extra()
+  )
+})
+
+
+
+bot.hears(l1_1, ctx => {
+  
+  if (ctx.state.role) {
+    ctx.reply(
+      'Ваш ID '+ctx.state.role.do.id,
+      Markup
+      .keyboard([
+        [l1_1_l2_1, '/start']
+      ])
+      .oneTime()
+      .resize()
+      .extra()
+    )
+  }
+  else {
+    ctx.reply('Введите свой ID (числовое значение, полученное Вами при включении)')
+  }
+
+})
+
+
+
+
+bot.hears(l1_1_l2_1, (ctx) => {
+  let reqOp = {...reqOptions}
+  reqOp.form = {request_type: 'SRGP_API_DOG_BALANCE', dog_id: ctx.state.role.do.id}
+  
+  let resultJson = ['x', 'x']
+  request(reqOp, (requestErr, requestRes, requestBody) => {
+    resultJson = JSON.parse(requestBody)
+    ctx.reply('Ваш баланс: '+resultJson[0]+' \u20BD')
+    ctx.reply('Оплачено дней: '+resultJson[1])
+  })
+  ctx.reply('Запрос данных...')
+})
+
+
+
+bot.hears(l1_2, ctx => {
+  ctx.reply('Превращаемся в абонента.')
+})
+
