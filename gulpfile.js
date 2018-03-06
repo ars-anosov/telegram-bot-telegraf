@@ -30,7 +30,7 @@ var rsyncConfGlob = {
   emptyDirectories:      true,
   recursive:      	     true,
   clean:          	     false,
-  exclude:        	     ['.*', 'README.md', 'node_modules', 'package-lock.json', 'gulpfile.js', 'cert']
+  exclude:        	     ['.*', 'README.md', 'node_modules', 'package-lock.json', 'gulpfile.js', 'cert', 'local_db.json']
 };
 
 

@@ -20,9 +20,11 @@ const sslCredentials = {
   ca:   fs.readFileSync( path.join(__dirname, 'cert/ca.pem') )
 }
 
+// curl -d "request_type=SRGP_API_DOG_BALANCE&dog_id=01234513042017" -H "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" -X POST http://xn--80ahqgegdcb.xn--p1ai/newtest.php
+// curl -d "request_type=SRGP_API_DOG_BALANCE&dog_id=01234513042017" -H "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" -X POST http://89.188.160.0:32180
 const request = require('request');
 var reqOptions = {  
-  url:      'http://xn--80ahqgegdcb.xn--p1ai/newtest.php',
+  url:      'http://89.188.160.0:32180',
   method:   'POST',
   encoding: 'utf8'
 }
@@ -68,7 +70,7 @@ httpsServer.listen(whPort, () => {
 //----------------------------------------------------------------------------|
 
 // context extend ------------------------------------------------------------
-bot.context.localDb = []
+bot.context.localDb = JSON.parse( fs.readFileSync( path.join(__dirname, 'local_db.json') ) )
 
 
 const session = require('telegraf/session')
@@ -103,11 +105,9 @@ bot.use((ctx, next) => {
   if (ctx.update.callback_query)  { objRef = ctx.update.callback_query }
 
   console.log('role middleware ------------------------:')
-  console.log(objRef)
+  console.log(ctx.localDb)
   if (objRef.from) {
-    ctx.localDb.map( (row, i) => {
-      if (row.id === objRef.from.id) { ctx.state.role = row }
-    })
+    ctx.state.role = ctx.localDb[objRef.from.id] ? ctx.localDb[objRef.from.id] : false
   }
 
   return next()
@@ -126,25 +126,11 @@ bot.use(session({ ttl: 10 }))
 
 
 
-/*
-Я абонент домонлан.рф
-
-  Введите свой ID (числовое значение, полученное Вами при включении)
-  
-  Поздравляем! Вы подписались на домонлайн.рф.
-  Используйте /off чтобы приостановить подписку.
-
-  Ваша подписка деактивирована.
-  Вы всегда можете включить ее снова с помощью команды /on.
-
-Я хочу стать абонентом домонлайн.рф
-*/
-
-// curl -d "request_type=SRGP_API_DOG_BALANCE&dog_id=01234513042017" -H "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" -X POST http://xn--80ahqgegdcb.xn--p1ai/newtest.php
 
 
-const id_input_text = 'Напишите свой <b>ID</b>\n(числовое значение, полученное Вами при включении)'
-const id_change_text = 'Ok. Напишите новый ID.'
+
+const hears_id_new = 'Ок. Напишите свой <b>ID</b>\n(числовое значение, полученное Вами при включении)'
+const hears_id_change = 'Ok. Напишите новый ID.'
 
 
 const level_1_markup = Extra
@@ -199,7 +185,7 @@ callbackRouter.on('abonent', (ctx) => {
     ctx.editMessageText(ctx.session.value, level_2_markup).catch(() => undefined)
   }
   else {
-    ctx.session.value = id_input_text
+    ctx.session.value = hears_id_new
     ctx.editMessageText(ctx.session.value, level_last_markup).catch(() => undefined)
   }
 })
@@ -210,7 +196,7 @@ callbackRouter.on('not_abonent', (ctx) => {
 })
 
 callbackRouter.on('id_change', (ctx) => {
-  ctx.session.value = id_change_text
+  ctx.session.value = hears_id_change
   ctx.editMessageText(ctx.session.value, level_last_markup).catch(() => undefined)
 })
 
@@ -278,29 +264,47 @@ bot.on('callback_query', callbackRouter)
 bot.hears(/.*/, (ctx) => {
   console.log('<--------------- hears ---------------->')
 
-  if (ctx.session.value === id_input_text) {
-    let exists = false
-    ctx.localDb.map( (row, i) => {
-      if (row.id === ctx.message.from.id) { exists = i }
-    })
-    if (!exists) {
-      ctx.message.from.do = {id: ctx.message.text}
-      bot.context.localDb.push(ctx.message.from)
+  if (ctx.message) {
+
+    // Новый ID
+    if (ctx.session.value === hears_id_new) {
+      if (ctx.localDb[ctx.message.from.id]) {
+        ctx.session.value = 'Не прошло! В этом чате уже был присвоен ID'
+        ctx.reply(ctx.session.value, level_1_markup)
+      }
+      else {
+        ctx.localDb[ctx.message.from.id] = ctx.message.from
+        ctx.localDb[ctx.message.from.id].do = {id: ctx.message.text}
+
+        fs.writeFile(path.join(__dirname, 'local_db.json'), JSON.stringify(ctx.localDb, "", 2), 'utf8', (err) => {
+          if (err) throw err;
+          console.log('local_db.json has been saved!');
+        })
+
+        ctx.session.value = 'Успешно! ID присвоен.'
+        ctx.reply(ctx.session.value, level_1_markup)
+      }
     }
 
-    ctx.session.value = 'Успешно! ID присвоен.'
-    ctx.reply(ctx.session.value, level_1_markup)
-  }
+    // Смена ID
+    if (ctx.session.value === hears_id_change) {
+      if (ctx.localDb[ctx.message.from.id]) {
+        ctx.localDb[ctx.message.from.id].do = {id: ctx.message.text}
 
-  if (ctx.session.value === id_change_text) {
-    ctx.localDb.map( (row, i) => {
-      if (row.id === ctx.message.from.id) {
-        bot.context.localDb[i].do.id = ctx.message.text
+        fs.writeFile(path.join(__dirname, 'local_db.json'), JSON.stringify(ctx.localDb, "", 2), 'utf8', (err) => {
+          if (err) throw err;
+          console.log('local_db.json has been saved!');
+        })
+
+        ctx.session.value = 'Успешно! ID изменен.'
+        ctx.reply(ctx.session.value, level_1_markup)
       }
-    })
+      else {
+        ctx.session.value = 'Не прошло! В этом чате еще не было ID'
+        ctx.reply(ctx.session.value, level_1_markup)
+      }
+    }
 
-    ctx.session.value = 'Успешно! ID изменен.'
-    ctx.reply(ctx.session.value, level_1_markup)
   }
   
 })
