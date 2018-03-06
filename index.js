@@ -68,18 +68,7 @@ httpsServer.listen(whPort, () => {
 //----------------------------------------------------------------------------|
 
 // context extend ------------------------------------------------------------
-bot.context.localDb = [
-  { id: 65111617,
-    is_bot: false,
-    first_name: 'Arseny',
-    last_name: 'Anosov',
-    username: 'ars_anosov',
-    language_code: 'ru',
-    do: {
-      id: '01810413042017'
-    }
-  }
-]
+bot.context.localDb = []
 
 
 const session = require('telegraf/session')
