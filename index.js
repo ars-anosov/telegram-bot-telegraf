@@ -3,8 +3,10 @@ var appPath       = process.argv[1]
 var token         = process.argv[2]
 var whIp          = process.argv[3]
 var whPort        = process.argv[4]
+var ykToken       = process.argv[5]
 var whPath        = 'https://'+whIp+':'+whPort+'/'+token
 console.log('webhook path: '+whPath)
+console.log('kassa.yandex.ru provider_token: '+ykToken)
 
 const fs          = require('fs')
 const path        = require('path')
@@ -127,6 +129,15 @@ bot.use(session({ ttl: 10 }))
 
 
 
+function fixedFromCharCode (codePt) {
+  if (codePt > 0xFFFF) {
+    codePt -= 0x10000;
+    return String.fromCharCode(0xD800 + (codePt >> 10), 0xDC00 + (codePt & 0x3FF));
+  }
+  else {
+    return String.fromCharCode(codePt);
+  }
+}
 
 
 const hears_id_new = 'Ок. Напишите свой <b>ID</b>\n(числовое значение, полученное Вами при включении)'
@@ -144,7 +155,8 @@ const level_1_markup = Extra
 const level_2_markup = Extra
   .HTML()
   .markup((m) => m.inlineKeyboard([
-    m.callbackButton('\u26FD Проверить баланс', 'balance_check:456'),
+    m.callbackButton(fixedFromCharCode(0x1F4BC)+' Проверить баланс', 'balance_check:456'),
+    m.callbackButton(fixedFromCharCode(0x1F4B3)+' Пополнить баланс', 'balance_pay:456'),
     m.callbackButton('\u267B У меня другой ID', 'id_change:123'),
     m.callbackButton('\u2693 Start', 'go_start:456')
   ], {columns: 2}))
@@ -154,6 +166,7 @@ const level_last_markup = Extra
   //.markup((m) => m.inlineKeyboard([
   //  m.callbackButton('\u2693 Start', 'go_start:456')
   //], {columns: 1}))
+
 
 
 
@@ -215,6 +228,50 @@ callbackRouter.on('balance_check', (ctx) => {
   ctx.editMessageText(new Date(), level_2_markup).catch(() => undefined)
 })
 
+callbackRouter.on('balance_pay', (ctx) => {
+
+  const invoice = {
+    provider_token: ykToken,
+    start_parameter: 'start_parameter_test',
+    title: 'Абонент ID '+ctx.state.role.do.id,
+    description: 'пополнение баланса',
+    currency: 'RUB',
+    is_flexible: false,   // true если есть shipping method
+    prices: [
+      { label: 'RUB', amount: 6000 }
+    ],
+    payload: 'Абонент ID '+ctx.state.role.do.id+' - пополнение баланса',
+    provider_data: {
+      receipt: {
+        email: 'ars-anosov@yandex.ru',
+        items: [
+          {
+            description: 'Абонент ID '+ctx.state.role.do.id,
+            quantity: '1.00',
+            amount: {
+              value: '60.00',
+              currency: 'RUB'
+            },
+            vat_code: 1
+          }
+        ]
+      }
+    }
+  }
+
+  //ctx.telegram.sendInvoice(ctx.message.chat.id, invoice)
+  ctx.replyWithInvoice(invoice)
+  .then((state) => {
+    console.log('sendInvoice - Ok')
+    console.log(state)
+  })
+  .catch((error) => {
+    console.log('sendInvoice - Err')
+    console.log(error)
+  })
+
+})
+
 callbackRouter.on('go_start', (ctx) => {
   ctx.session.value = 'start'
   ctx.editMessageText(ctx.session.value, level_1_markup).catch(() => undefined)
@@ -246,7 +303,11 @@ bot.start((ctx) => {
 })
 bot.on('callback_query', callbackRouter)
 
-
+bot.on('pre_checkout_query', (ctx) => {
+  console.log('on - pre_checkout_query')
+  ctx.answerPreCheckoutQuery(true)
+})
+bot.on('successful_payment', () => console.log('on - successful_payment'))
 
 
 
@@ -265,46 +326,60 @@ bot.hears(/.*/, (ctx) => {
   console.log('<--------------- hears ---------------->')
 
   if (ctx.message) {
+    switch(ctx.session.value) {
 
-    // Новый ID
-    if (ctx.session.value === hears_id_new) {
-      if (ctx.localDb[ctx.message.from.id]) {
-        ctx.session.value = 'Не прошло! В этом чате уже был присвоен ID'
+
+      // Новый ID
+      case hears_id_new:
+      
+        if (ctx.localDb[ctx.message.from.id]) {
+          ctx.session.value = 'Не прошло! В этом чате уже был присвоен ID'
+          ctx.reply(ctx.session.value, level_1_markup)
+        }
+        else {
+          ctx.localDb[ctx.message.from.id] = ctx.message.from
+          ctx.localDb[ctx.message.from.id].do = {id: ctx.message.text}
+  
+          fs.writeFile(path.join(__dirname, 'local_db.json'), JSON.stringify(ctx.localDb, "", 2), 'utf8', (err) => {
+            if (err) throw err;
+            console.log('local_db.json has been saved!');
+          })
+  
+          ctx.session.value = 'Успешно! ID присвоен.'
+          ctx.reply(ctx.session.value, level_1_markup)
+        }
+
+        break
+
+
+      // Смена ID
+      case hears_id_change:
+
+        if (ctx.localDb[ctx.message.from.id]) {
+          ctx.localDb[ctx.message.from.id].do = {id: ctx.message.text}
+  
+          fs.writeFile(path.join(__dirname, 'local_db.json'), JSON.stringify(ctx.localDb, "", 2), 'utf8', (err) => {
+            if (err) throw err;
+            console.log('local_db.json has been saved!');
+          })
+  
+          ctx.session.value = 'Успешно! ID изменен.'
+          ctx.reply(ctx.session.value, level_1_markup)
+        }
+        else {
+          ctx.session.value = 'Не прошло! В этом чате еще не было ID'
+          ctx.reply(ctx.session.value, level_1_markup)
+        }
+        
+        break
+
+
+      default:
+        ctx.session.value = 'start'
         ctx.reply(ctx.session.value, level_1_markup)
-      }
-      else {
-        ctx.localDb[ctx.message.from.id] = ctx.message.from
-        ctx.localDb[ctx.message.from.id].do = {id: ctx.message.text}
-
-        fs.writeFile(path.join(__dirname, 'local_db.json'), JSON.stringify(ctx.localDb, "", 2), 'utf8', (err) => {
-          if (err) throw err;
-          console.log('local_db.json has been saved!');
-        })
-
-        ctx.session.value = 'Успешно! ID присвоен.'
-        ctx.reply(ctx.session.value, level_1_markup)
-      }
+        break
+  
     }
-
-    // Смена ID
-    if (ctx.session.value === hears_id_change) {
-      if (ctx.localDb[ctx.message.from.id]) {
-        ctx.localDb[ctx.message.from.id].do = {id: ctx.message.text}
-
-        fs.writeFile(path.join(__dirname, 'local_db.json'), JSON.stringify(ctx.localDb, "", 2), 'utf8', (err) => {
-          if (err) throw err;
-          console.log('local_db.json has been saved!');
-        })
-
-        ctx.session.value = 'Успешно! ID изменен.'
-        ctx.reply(ctx.session.value, level_1_markup)
-      }
-      else {
-        ctx.session.value = 'Не прошло! В этом чате еще не было ID'
-        ctx.reply(ctx.session.value, level_1_markup)
-      }
-    }
-
   }
   
 })

@@ -73,17 +73,19 @@ openssl x509 -req -days 10950 -CA ca.pem -CAkey ca.key -set_serial 01 \
 
 
 ## Запуск бота
+- BOT_TOKEN - выдает @BotFather
+- PROVIDER_TOKEN - привязка платежной системы через @BotFather
 
 В контейнере - не забыть сделать port redirect с реального IP. Запускаем:
 ```
 npm install
-node index.js $TOKEN <MY_EXTERNAL_IP> 8443
+node index.js $TOKEN <MY_EXTERNAL_IP> 8443 <INSERT_PROVIDER_TOKEN_HERE>
 ```
 
 На production машине:
 ```
 npm install
-node index.js <INSERT_BOT_TOKEN_HERE> 89.188.160.102 8443
+node index.js <INSERT_BOT_TOKEN_HERE> 89.188.160.102 8443 <INSERT_PROVIDER_TOKEN_HERE>
 ```
 
 
