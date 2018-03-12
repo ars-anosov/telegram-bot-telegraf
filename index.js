@@ -22,6 +22,8 @@ const sslCredentials = {
   ca:   fs.readFileSync( path.join(__dirname, 'cert/ca.pem') )
 }
 
+var localDb = JSON.parse( fs.readFileSync( path.join(__dirname, 'local_db.json') ) )
+
 // curl -d "request_type=SRGP_API_DOG_BALANCE&dog_id=01234513042017" -H "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" -X POST http://xn--80ahqgegdcb.xn--p1ai/newtest.php
 // curl -d "request_type=SRGP_API_DOG_BALANCE&dog_id=01234513042017" -H "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" -X POST http://89.188.160.0:32180
 const request = require('request');
@@ -72,7 +74,7 @@ httpsServer.listen(whPort, () => {
 //----------------------------------------------------------------------------|
 
 // context extend ------------------------------------------------------------
-bot.context.localDb = JSON.parse( fs.readFileSync( path.join(__dirname, 'local_db.json') ) )
+bot.context.globContextObj = {foo: 'bar'}
 
 
 const session = require('telegraf/session')
@@ -100,6 +102,7 @@ bot.use(async (ctx, next) => {
 
 // Naive authorization middleware
 bot.use((ctx, next) => {
+  // The recommended namespace to share information between middlewares
   ctx.state.role = false
   let objRef = {}
 
@@ -107,16 +110,16 @@ bot.use((ctx, next) => {
   if (ctx.update.callback_query)  { objRef = ctx.update.callback_query }
 
   console.log('role middleware ------------------------:')
-  console.log(ctx.localDb)
+  console.log(objRef)
   if (objRef.from) {
-    ctx.state.role = ctx.localDb[objRef.from.id] ? ctx.localDb[objRef.from.id] : false
+    ctx.state.role = localDb[objRef.from.id] ? localDb[objRef.from.id] : false
   }
 
   return next()
 })
 
 // session
-bot.use(session({ ttl: 10 }))
+bot.use(session())
 
 
 
@@ -147,25 +150,38 @@ const hears_id_change = 'Ok. Напишите новый ID.'
 const level_1_markup = Extra
   .HTML()
   .markup((m) => m.inlineKeyboard([
-    m.callbackButton('\u26F3 Я абонент домонлайн.рф', 'abonent:123'),
-    m.callbackButton('\u26F9 Я хочу стать абонентом', 'not_abonent:456')
+    m.callbackButton('\u26F3 Я абонент домонлайн.рф', 'abonent'),
+    m.callbackButton('\u26F9 Я хочу стать абонентом', 'not_abonent')
   ], {columns: 2}))
 
-
-const level_2_markup = Extra
+const level_2_1_markup = Extra
   .HTML()
   .markup((m) => m.inlineKeyboard([
-    m.callbackButton(fixedFromCharCode(0x1F4BC)+' Проверить баланс', 'balance_check:456'),
-    m.callbackButton(fixedFromCharCode(0x1F4B3)+' Пополнить баланс', 'balance_pay:456'),
-    m.callbackButton('\u267B У меня другой ID', 'id_change:123'),
-    m.callbackButton('\u2693 Start', 'go_start:456')
+    m.callbackButton(fixedFromCharCode(0x1F4BC)+' Проверить баланс',      'balance_check'),
+    m.callbackButton(fixedFromCharCode(0x1F4B3)+' Пополнить баланс',      'balance_pay'),
+    m.callbackButton(fixedFromCharCode(0x1F4DA)+' Сменить тариф',         'tarif_change'),
+    m.callbackButton(fixedFromCharCode(0x1F334)+' Приостановить услуги',  'tarif_pause'),
+    m.callbackButton(fixedFromCharCode(0x1F46B)+' Приведи друга',         'friends_invite'),
+    m.callbackButton(fixedFromCharCode(0x1F697)+' Вызов специалиста',     'call_egineer'),
+    m.callbackButton(fixedFromCharCode(0x26F3) +' У меня другой ID',      'id_change'),
+    m.callbackButton(fixedFromCharCode(0x2716) +' Назад',                 'go_start')
+  ], {columns: 2}))
+
+const level_2_2_markup = Extra
+  .HTML()
+  .markup((m) => m.inlineKeyboard([
+    m.callbackButton(fixedFromCharCode(0x1F4DA)+' Тарифы и услуги',       'tarif_info'),
+    m.callbackButton(fixedFromCharCode(0x1F4CC)+' Заявка на включение',   'new_user_request'),
+    m.callbackButton(fixedFromCharCode(0x1F4B8)+' Способы оплаты',        'pay_methods'),
+    m.callbackButton(fixedFromCharCode(0x2754) +' Вопросы',               'issues'),
+    m.callbackButton(fixedFromCharCode(0x2716) +' Назад',                 'go_start')
   ], {columns: 2}))
 
 const level_last_markup = Extra
   .HTML()
-  //.markup((m) => m.inlineKeyboard([
-  //  m.callbackButton('\u2693 Start', 'go_start:456')
-  //], {columns: 1}))
+  .markup((m) => m.inlineKeyboard([
+    m.callbackButton(fixedFromCharCode(0x2716)+' Назад', 'go_start')
+  ], {columns: 1}))
 
 
 
@@ -187,15 +203,16 @@ const callbackRouter = new Router(({ callbackQuery }) => {
   return {
     route: parts[0],
     state: {
-      amount: parseInt(parts[1], 10) || 0
+      rou: 'routed'
     }
   }
 })
 
+// level_1 ------------------------------------------------
 callbackRouter.on('abonent', (ctx) => {
   if (ctx.state.role) {
     ctx.session.value = 'Ваш ID: <b>'+ctx.state.role.do.id+'</b>'
-    ctx.editMessageText(ctx.session.value, level_2_markup).catch(() => undefined)
+    ctx.editMessageText(ctx.session.value, level_2_1_markup).catch(() => undefined)
   }
   else {
     ctx.session.value = hears_id_new
@@ -204,13 +221,34 @@ callbackRouter.on('abonent', (ctx) => {
 })
 
 callbackRouter.on('not_abonent', (ctx) => {
-  ctx.session.value = 'В разработке...'
-  ctx.editMessageText(ctx.session.value, level_1_markup).catch(() => undefined)
+  ctx.session.value = 'Я хочу стать абонентом (в разработке)'
+  ctx.editMessageText(ctx.session.value, level_2_2_markup).catch(() => undefined)
 })
 
+// level_2_1 ----------------------------------------------
 callbackRouter.on('id_change', (ctx) => {
   ctx.session.value = hears_id_change
   ctx.editMessageText(ctx.session.value, level_last_markup).catch(() => undefined)
+})
+
+callbackRouter.on('tarif_change', (ctx) => {
+  ctx.session.value = 'Сменить тариф (в разработке)'
+  ctx.editMessageText(ctx.session.value, level_2_1_markup).catch(() => undefined)
+})
+
+callbackRouter.on('tarif_pause', (ctx) => {
+  ctx.session.value = 'Приостановить услуги (в разработке)'
+  ctx.editMessageText(ctx.session.value, level_2_1_markup).catch(() => undefined)
+})
+
+callbackRouter.on('friends_invite', (ctx) => {
+  ctx.session.value = 'Приведи друга (в разработке)'
+  ctx.editMessageText(ctx.session.value, level_2_1_markup).catch(() => undefined)
+})
+
+callbackRouter.on('call_egineer', (ctx) => {
+  ctx.session.value = 'Вызов специалиста (в разработке)'
+  ctx.editMessageText(ctx.session.value, level_2_1_markup).catch(() => undefined)
 })
 
 callbackRouter.on('balance_check', (ctx) => {
@@ -222,10 +260,10 @@ callbackRouter.on('balance_check', (ctx) => {
     let resultJson = JSON.parse(requestBody)
     ctx.session.value = 'Ваш баланс: <b>'+resultJson[0]+' \u20BD</b>\nОплачено дней: <b>'+resultJson[1]+'</b>'
     //console.log(ctx.session.value)
-    ctx.editMessageText(ctx.session.value, level_2_markup).catch(() => undefined)
+    ctx.editMessageText(ctx.session.value, level_2_1_markup).catch(() => undefined)
   })
 
-  ctx.editMessageText(new Date(), level_2_markup).catch(() => undefined)
+  ctx.editMessageText(new Date(), level_2_1_markup).catch(() => undefined)
 })
 
 callbackRouter.on('balance_pay', (ctx) => {
@@ -272,8 +310,34 @@ callbackRouter.on('balance_pay', (ctx) => {
 
 })
 
+// level_2_2 ----------------------------------------------
+callbackRouter.on('tarif_info', (ctx) => {
+  ctx.session.value =
+'<b>БЕЗ ОГРАНИЧЕНИЙ</b>: 500 ₽ / 30 дней\n'+
+'<b>ОГРАНИЧЕННЫЙ</b> (скорость до 10 мб/с): 290 ₽ / 30 дней\n'+
+'Подробней: <a href="http://xn--80ahqgegdcb.xn--p1ai/">на сайте</a>'
+
+  ctx.editMessageText(ctx.session.value, level_2_2_markup).catch(() => undefined)
+})
+
+callbackRouter.on('new_user_request', (ctx) => {
+  ctx.session.value = 'Заявка на включение (в разработке)'
+  ctx.editMessageText(ctx.session.value, level_2_2_markup).catch(() => undefined)
+})
+
+callbackRouter.on('issues', (ctx) => {
+  ctx.session.value = 'Вопросы (в разработке)'
+  ctx.editMessageText(ctx.session.value, level_2_2_markup).catch(() => undefined)
+})
+
+callbackRouter.on('pay_methods', (ctx) => {
+  ctx.session.value = 'Способы оплаты (в разработке)'
+  ctx.editMessageText(ctx.session.value, level_2_2_markup).catch(() => undefined)
+})
+
+// all ----------------------------------------------------
 callbackRouter.on('go_start', (ctx) => {
-  ctx.session.value = 'start'
+  ctx.session.value = 'Привет. Выбираем нужное, кликаем кнопки.'
   ctx.editMessageText(ctx.session.value, level_1_markup).catch(() => undefined)
 })
 
@@ -298,7 +362,7 @@ callbackRouter.otherwise((ctx) => ctx.reply('🌯'))
 
 
 bot.start((ctx) => {
-  ctx.session.value = 'start'
+  ctx.session.value = 'Привет. Выбираем нужное, кликаем кнопки.'
   return ctx.reply(ctx.session.value, level_1_markup)
 })
 bot.on('callback_query', callbackRouter)
@@ -324,6 +388,7 @@ bot.on('successful_payment', () => console.log('on - successful_payment'))
 
 bot.hears(/.*/, (ctx) => {
   console.log('<--------------- hears ---------------->')
+  console.log(ctx.session)
 
   if (ctx.message) {
     switch(ctx.session.value) {
@@ -332,15 +397,15 @@ bot.hears(/.*/, (ctx) => {
       // Новый ID
       case hears_id_new:
       
-        if (ctx.localDb[ctx.message.from.id]) {
+        if (localDb[ctx.message.from.id]) {
           ctx.session.value = 'Не прошло! В этом чате уже был присвоен ID'
           ctx.reply(ctx.session.value, level_1_markup)
         }
         else {
-          ctx.localDb[ctx.message.from.id] = ctx.message.from
-          ctx.localDb[ctx.message.from.id].do = {id: ctx.message.text}
+          localDb[ctx.message.from.id] = ctx.message.from
+          localDb[ctx.message.from.id].do = {id: ctx.message.text}
   
-          fs.writeFile(path.join(__dirname, 'local_db.json'), JSON.stringify(ctx.localDb, "", 2), 'utf8', (err) => {
+          fs.writeFile(path.join(__dirname, 'local_db.json'), JSON.stringify(localDb, "", 2), 'utf8', (err) => {
             if (err) throw err;
             console.log('local_db.json has been saved!');
           })
@@ -355,10 +420,10 @@ bot.hears(/.*/, (ctx) => {
       // Смена ID
       case hears_id_change:
 
-        if (ctx.localDb[ctx.message.from.id]) {
-          ctx.localDb[ctx.message.from.id].do = {id: ctx.message.text}
+        if (localDb[ctx.message.from.id]) {
+          localDb[ctx.message.from.id].do = {id: ctx.message.text}
   
-          fs.writeFile(path.join(__dirname, 'local_db.json'), JSON.stringify(ctx.localDb, "", 2), 'utf8', (err) => {
+          fs.writeFile(path.join(__dirname, 'local_db.json'), JSON.stringify(localDb, "", 2), 'utf8', (err) => {
             if (err) throw err;
             console.log('local_db.json has been saved!');
           })
@@ -375,7 +440,7 @@ bot.hears(/.*/, (ctx) => {
 
 
       default:
-        ctx.session.value = 'start'
+        ctx.session.value = 'Привет. Выбираем нужное, кликаем кнопки.'
         ctx.reply(ctx.session.value, level_1_markup)
         break
   

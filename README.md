@@ -12,8 +12,10 @@ Telegram bot на базе фреймворка [telegraf](https://github.com/te
 ### Окружение
 Работал в следующем окружении (для себя правим на нужные IP):
 
-- **Docker-контейнер** - NodeJS v.9 для разработки.
-- **89.188.160.102** - pruduction машина. Доступна по **HTTPS**. Деплой утилитой **rsync**.
+- **telegram-bot-telegraf** - Docker-контейнер NodeJS v.9 для разработки. Деплой утилитой **rsync**.
+- **89.188.160.102** - Pruduction машина. Доступна по **HTTPS**. Умеет **rsync**.
+- **TOKEN** - выдает @BotFather
+- **PROVIDER_TOKEN** - привязка платежной системы к боту через @BotFather
 
 Поддерживаемые TCP-порты: 443, 80, 88, 8443 (см. [офф.док.](https://core.telegram.org/bots/api) метод "setWebhook").
 ```
@@ -25,6 +27,7 @@ sudo docker run \
   -w /telegram-bot-telegraf \
   --publish=8443:8443 \
   --env="TOKEN=INSERT_BOT_TOKEN_HERE" \
+  --env="PROVIDER_TOKEN=INSERT_PROVIDER_TOKEN_HERE" \
   -it \
   node:9 bash
 ```
@@ -35,16 +38,14 @@ sudo docker run \
 
 ## TLS сертификаты
 
-Webhook работает по шифрованому TLS-каналу. Складываем сертификаты в директорию "cert". В контейнере свои, на production-машине свои.
+Webhook работает по шифрованому TLS-каналу. Складываем сертификаты в директорию "cert". В контейнере свои, на production-машине свои. Использую самоподписные сертификаты.
 ```
 mkdir cert && cd cert
 ```
 
-Использую самоподписные сертификаты.
-
 Офф. документация - https://core.telegram.org/bots/self-signed (не делал).
 
-Ниже CN=89.188.160.102 меняем на свой внешний IP. Созадем x.509 PKI по порядку:
+Создавал x.509 PKI по порядку. Ниже CN=89.188.160.102 меняем на свой внешний IP.
 
 ### CA (Certification Authority)
 ```
@@ -73,13 +74,11 @@ openssl x509 -req -days 10950 -CA ca.pem -CAkey ca.key -set_serial 01 \
 
 
 ## Запуск бота
-- BOT_TOKEN - выдает @BotFather
-- PROVIDER_TOKEN - привязка платежной системы через @BotFather
 
-В контейнере - не забыть сделать port redirect с реального IP. Запускаем:
+В контейнере - не забыть сделать port redirect с реального EXTERNAL IP. Запускаем:
 ```
 npm install
-node index.js $TOKEN <MY_EXTERNAL_IP> 8443 <INSERT_PROVIDER_TOKEN_HERE>
+node index.js $TOKEN <INSERT_EXTERNAL_IP_HERE> 8443 $PROVIDER_TOKEN
 ```
 
 На production машине:
