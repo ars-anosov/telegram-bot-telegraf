@@ -1,3 +1,4 @@
+// arg
 var nodePath      = process.argv[0]
 var appPath       = process.argv[1]
 var token         = process.argv[2]
@@ -8,30 +9,44 @@ var whPath        = 'https://'+whIp+':'+whPort+'/'+token
 console.log('webhook path: '+whPath)
 console.log('kassa.yandex.ru provider_token: '+ykToken)
 
+// my modules
+const tgTools         = require('./tools/tg_tools')
+const stateControl    = require('./middleware/stateControl')
+
+const balance_check   = require('./controllers/balance_check')
+const yk_sendInvoice  = require('./controllers/yk_sendInvoice')
+const tarif_info      = require('./controllers/tarif_info')
+const pay_methods      = require('./controllers/pay_methods')
+
+const hears_id_new_do     = require('./controllers/hears_id_new')
+const hears_id_change_do  = require('./controllers/hears_id_change')
+
+
+// fs
 const fs          = require('fs')
 const path        = require('path')
+
+// https
 const https       = require('https')
 const express     = require('express')
-
-const Telegraf    = require('telegraf')
-const bot         = new Telegraf(token)
-
 const sslCredentials = {
   key:  fs.readFileSync( path.join(__dirname, 'cert/client.key') ),
   cert: fs.readFileSync( path.join(__dirname, 'cert/client.pem') ),
   ca:   fs.readFileSync( path.join(__dirname, 'cert/ca.pem') )
 }
 
+// telegraf
+const Telegraf    = require('telegraf')
+const bot         = new Telegraf(token)
+
+// localDb
 var localDb = JSON.parse( fs.readFileSync( path.join(__dirname, 'local_db.json') ) )
 
-// curl -d "request_type=SRGP_API_DOG_BALANCE&dog_id=01234513042017" -H "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" -X POST http://xn--80ahqgegdcb.xn--p1ai/newtest.php
-// curl -d "request_type=SRGP_API_DOG_BALANCE&dog_id=01234513042017" -H "Content-Type: application/x-www-form-urlencoded; charset=UTF-8" -X POST http://89.188.160.0:32180
-const request = require('request');
-var reqOptions = {  
-  url:      'http://89.188.160.0:32180',
-  method:   'POST',
-  encoding: 'utf8'
-}
+
+
+
+
+
 
 
 
@@ -54,6 +69,12 @@ bot.startWebhook('/'+token, tlsOptions, whPort)
 
 
 
+
+
+
+
+
+
 //----------------------------------------------------------------------------|
 //                                  express                                   |
 //----------------------------------------------------------------------------|
@@ -69,58 +90,31 @@ httpsServer.listen(whPort, () => {
 
 
 
+
+
+
+
+
+
 //----------------------------------------------------------------------------|
 //                                    bot                                     |
 //----------------------------------------------------------------------------|
 
-// context extend ------------------------------------------------------------
+// addons ---------------------------------------------------------------------
+const session   = require('telegraf/session')
+const Router    = require('telegraf/router')
+const Extra     = require('telegraf/extra')
+
+// context extend -------------------------------------------------------------
 bot.context.globContextObj = {foo: 'bar'}
 
+// middleware -----------------------------------------------------------------
 
-const session = require('telegraf/session')
-const Router = require('telegraf/router')
-const Extra = require('telegraf/extra')
-//const Markup = require('telegraf/markup')
-//
-//const Stage = require('telegraf/stage')
-//const Scene = require('telegraf/scenes/base')
-//const { enter, leave } = Stage
-
-
-
-
-// middleware ----------------------------------------------------------------
-
-// timer
-bot.use(async (ctx, next) => {
-  const start = new Date()
-  await next()
-  const ms = new Date() - start
-  console.log('timer middleware ------------------------:')
-  console.log('Response time %sms', ms)
-})
-
-// Naive authorization middleware
-bot.use((ctx, next) => {
-  // The recommended namespace to share information between middlewares
-  ctx.state.role = false
-  let objRef = {}
-
-  if (ctx.message)                { objRef = ctx.message }
-  if (ctx.update.callback_query)  { objRef = ctx.update.callback_query }
-
-  console.log('role middleware ------------------------:')
-  console.log(objRef)
-  if (objRef.from) {
-    ctx.state.role = localDb[objRef.from.id] ? localDb[objRef.from.id] : false
-  }
-
-  return next()
-})
-
-// session
+// --- session
 bot.use(session())
 
+// --- state   >   The recommended namespace to share information between middlewares
+bot.use(stateControl(localDb))
 
 
 
@@ -130,23 +124,14 @@ bot.use(session())
 
 
 
+// heras match texts ----------------------------------------------------------
+const hears_id_new                = 'Ок. Напишите свой <b>ID</b>\n(числовое значение, полученное Вами при включении)'
+const hears_id_change             = 'Ok. Напишите новый <b>ID</b>.'
+const hears_invoice_balance_sum   = 'Ok. Напишите сумму пополнения баланса <b>Руб</b>.'
 
 
-function fixedFromCharCode (codePt) {
-  if (codePt > 0xFFFF) {
-    codePt -= 0x10000;
-    return String.fromCharCode(0xD800 + (codePt >> 10), 0xDC00 + (codePt & 0x3FF));
-  }
-  else {
-    return String.fromCharCode(codePt);
-  }
-}
 
-
-const hears_id_new = 'Ок. Напишите свой <b>ID</b>\n(числовое значение, полученное Вами при включении)'
-const hears_id_change = 'Ok. Напишите новый ID.'
-
-
+// markups --------------------------------------------------------------------
 const level_1_markup = Extra
   .HTML()
   .markup((m) => m.inlineKeyboard([
@@ -157,30 +142,30 @@ const level_1_markup = Extra
 const level_2_1_markup = Extra
   .HTML()
   .markup((m) => m.inlineKeyboard([
-    m.callbackButton(fixedFromCharCode(0x1F4BC)+' Проверить баланс',      'balance_check'),
-    m.callbackButton(fixedFromCharCode(0x1F4B3)+' Пополнить баланс',      'balance_pay'),
-    m.callbackButton(fixedFromCharCode(0x1F4DA)+' Сменить тариф',         'tarif_change'),
-    m.callbackButton(fixedFromCharCode(0x1F334)+' Приостановить услуги',  'tarif_pause'),
-    m.callbackButton(fixedFromCharCode(0x1F46B)+' Приведи друга',         'friends_invite'),
-    m.callbackButton(fixedFromCharCode(0x1F697)+' Вызов специалиста',     'call_egineer'),
-    m.callbackButton(fixedFromCharCode(0x26F3) +' У меня другой ID',      'id_change'),
-    m.callbackButton(fixedFromCharCode(0x2716) +' Назад',                 'go_start')
+    m.callbackButton(tgTools.fixedFromCharCode(0x1F4BC)+' Проверить баланс',      'balance_check'),
+    m.callbackButton(tgTools.fixedFromCharCode(0x1F4B3)+' Пополнить баланс',      'yk_sendInvoice'),
+    m.callbackButton(tgTools.fixedFromCharCode(0x1F4DA)+' Сменить тариф',         'tarif_change'),
+    m.callbackButton(tgTools.fixedFromCharCode(0x1F334)+' Приостановить услуги',  'tarif_pause'),
+    m.callbackButton(tgTools.fixedFromCharCode(0x1F46B)+' Приведи друга',         'friends_invite'),
+    m.callbackButton(tgTools.fixedFromCharCode(0x1F697)+' Вызов специалиста',     'call_egineer'),
+    m.callbackButton(tgTools.fixedFromCharCode(0x26F3) +' У меня другой ID',      'id_change'),
+    m.callbackButton(tgTools.fixedFromCharCode(0x2716) +' Назад',                 'go_start')
   ], {columns: 2}))
 
 const level_2_2_markup = Extra
   .HTML()
   .markup((m) => m.inlineKeyboard([
-    m.callbackButton(fixedFromCharCode(0x1F4DA)+' Тарифы и услуги',       'tarif_info'),
-    m.callbackButton(fixedFromCharCode(0x1F4CC)+' Заявка на включение',   'new_user_request'),
-    m.callbackButton(fixedFromCharCode(0x1F4B8)+' Способы оплаты',        'pay_methods'),
-    m.callbackButton(fixedFromCharCode(0x2754) +' Вопросы',               'issues'),
-    m.callbackButton(fixedFromCharCode(0x2716) +' Назад',                 'go_start')
+    m.callbackButton(tgTools.fixedFromCharCode(0x1F4DA)+' Тарифы и услуги',       'tarif_info'),
+    m.callbackButton(tgTools.fixedFromCharCode(0x1F4CC)+' Заявка на включение',   'new_user_request'),
+    m.callbackButton(tgTools.fixedFromCharCode(0x1F4B8)+' Способы оплаты',        'pay_methods'),
+    m.callbackButton(tgTools.fixedFromCharCode(0x2754) +' Вопросы',               'issues'),
+    m.callbackButton(tgTools.fixedFromCharCode(0x2716) +' Назад',                 'go_start')
   ], {columns: 2}))
 
 const level_last_markup = Extra
   .HTML()
   .markup((m) => m.inlineKeyboard([
-    m.callbackButton(fixedFromCharCode(0x2716)+' Назад', 'go_start')
+    m.callbackButton(tgTools.fixedFromCharCode(0x2716)+' Назад', 'go_start')
   ], {columns: 1}))
 
 
@@ -191,14 +176,18 @@ const level_last_markup = Extra
 
 
 
-
+// callbackRouter -------------------------------------------------------------
 const callbackRouter = new Router(({ callbackQuery }) => {
   if (!callbackQuery.data) {
     return
   }
 
-  console.log('Router callbackQuery ------------------------:')
-  console.log(callbackQuery)
+  console.log('\nRouter callbackQuery -----------------------------------------:')
+  console.log('--- data:')
+  console.log(callbackQuery.data)
+  console.log('--- message.text:')
+  console.log(callbackQuery.message.text)
+
   const parts = callbackQuery.data.split(':')
   return {
     route: parts[0],
@@ -206,6 +195,7 @@ const callbackRouter = new Router(({ callbackQuery }) => {
       rou: 'routed'
     }
   }
+
 })
 
 // level_1 ------------------------------------------------
@@ -252,77 +242,17 @@ callbackRouter.on('call_egineer', (ctx) => {
 })
 
 callbackRouter.on('balance_check', (ctx) => {
-
-  let reqOp = {...reqOptions}
-  reqOp.form = {request_type: 'SRGP_API_DOG_BALANCE', dog_id: ctx.state.role.do.id}
-  
-  request(reqOp, (requestErr, requestRes, requestBody) => {
-    let resultJson = JSON.parse(requestBody)
-    ctx.session.value = 'Ваш баланс: <b>'+resultJson[0]+' \u20BD</b>\nОплачено дней: <b>'+resultJson[1]+'</b>'
-    //console.log(ctx.session.value)
-    ctx.editMessageText(ctx.session.value, level_2_1_markup).catch(() => undefined)
-  })
-
-  ctx.editMessageText(new Date(), level_2_1_markup).catch(() => undefined)
+  balance_check(ctx, level_2_1_markup)
 })
 
-callbackRouter.on('balance_pay', (ctx) => {
-
-  const invoice = {
-    provider_token: ykToken,
-    start_parameter: 'test',
-    title: 'Абон. плата',
-    description: 'Абонент '+ctx.state.role.do.id,
-    currency: 'RUB',
-    //photo_url: 'http://xn--80ahqgegdcb.xn--p1ai/assets/images/logo.png',
-    is_flexible: false,   // true if shipping method
-    prices: [
-      { label: 'Абон. плата', amount: 11000 }
-    ],
-    payload: {
-      item: 'Абон. плата'
-    }
-    //provider_data: {
-    //  receipt: {
-    //    email: 'ars-anosov@yandex.ru',
-    //    items: [
-    //      {
-    //        description: 'ID '+ctx.state.role.do.id,
-    //        quantity: '1.00',
-    //        amount: {
-    //          value: '110.00',
-    //          currency: 'RUB'
-    //        },
-    //        vat_code: 1
-    //      }
-    //    ]
-    //  }
-    //}
-  }
-
-  console.log(invoice)
-
-  //ctx.telegram.sendInvoice(ctx.message.chat.id, invoice)
-  ctx.replyWithInvoice(invoice)
-  .then((state) => {
-    console.log('sendInvoice - Ok')
-    console.log(state)
-  })
-  .catch((error) => {
-    console.log('sendInvoice - Err')
-    console.log(error)
-  })
-
+callbackRouter.on('yk_sendInvoice', (ctx) => {
+  ctx.session.value = hears_invoice_balance_sum  // go hears
+  ctx.reply(ctx.session.value, level_last_markup).catch(() => undefined)
 })
 
 // level_2_2 ----------------------------------------------
 callbackRouter.on('tarif_info', (ctx) => {
-  ctx.session.value =
-'<b>БЕЗ ОГРАНИЧЕНИЙ</b>: 500 ₽ / 30 дней\n'+
-'<b>ОГРАНИЧЕННЫЙ</b> (скорость до 10 мб/с): 290 ₽ / 30 дней\n'+
-'Подробней: <a href="http://xn--80ahqgegdcb.xn--p1ai/">на сайте</a>'
-
-  ctx.editMessageText(ctx.session.value, level_2_2_markup).catch(() => undefined)
+  tarif_info(ctx, level_2_2_markup)
 })
 
 callbackRouter.on('new_user_request', (ctx) => {
@@ -336,74 +266,12 @@ callbackRouter.on('issues', (ctx) => {
 })
 
 callbackRouter.on('pay_methods', (ctx) => {
-  ctx.session.value = 'Способы оплаты (в разработке)'
-//'            <a href="https://kassa.yandex.ru/payments#cards" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-1.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#cards" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-2.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#cards" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-3.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#cards" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-4.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#cards" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-22.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#emoney" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-5.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#emoney" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-6.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#emoney" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-7.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#bank" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-8.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#bank" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-9.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#bank" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-10.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#bank" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-11.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#phone" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-12.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#phone" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-13.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#phone" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-14.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#phone" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-21.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#credit" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-16.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#cash" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-18.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#cash" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-19.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#cash" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-20.png" alt="Alt">\n'+
-//'            </a>\n'
-
-  ctx.editMessageText(ctx.session.value, level_2_2_markup).catch(() => undefined)
+  pay_methods(ctx, level_2_2_markup)
 })
 
 // all ----------------------------------------------------
 callbackRouter.on('go_start', (ctx) => {
-  ctx.session.value = 'Привет. Выбираем нужное, кликаем кнопки.'
+  ctx.session.value = 'Привет \u270B'
   ctx.editMessageText(ctx.session.value, level_1_markup).catch(() => undefined)
 })
 
@@ -417,24 +285,19 @@ callbackRouter.otherwise((ctx) => ctx.reply('🌯'))
 
 
 
-
-
-
-
-
-
-
-
-
-
+// go start
 bot.start((ctx) => {
-  ctx.session.value = 'Привет. Выбираем нужное, кликаем кнопки.'
+  ctx.session.value = 'Привет \u270B'
   return ctx.reply(ctx.session.value, level_1_markup)
 })
+
+// go callbackRouter
 bot.on('callback_query', callbackRouter)
 
+// shipping_query finish
 bot.on('shipping_query', ({ answerShippingQuery }) => answerShippingQuery(true, []))
 
+// pre_checkout_query finish
 bot.on('pre_checkout_query', (ctx) => {
   console.log('on - pre_checkout_query')
   ctx.answerPreCheckoutQuery(true)
@@ -448,6 +311,7 @@ bot.on('pre_checkout_query', (ctx) => {
   })
 })
 
+// successful_payment finish
 bot.on('successful_payment', () => console.log('on - successful_payment'))
 
 
@@ -464,60 +328,43 @@ bot.on('successful_payment', () => console.log('on - successful_payment'))
 
 
 bot.hears(/.*/, (ctx) => {
-  console.log('<--------------- hears ---------------->')
-  console.log(ctx.session)
+  console.log('>>> hears -------------------------------------------------------------:')
+  console.log('--- updateType:')
+  console.log(ctx.updateType)
 
-  if (ctx.message) {
+  if (ctx.updateType === 'message') {
+    console.log('--- message:')
+    console.log(ctx.message)
+    console.log('--- session:')
+    console.log(ctx.session)
+
     switch(ctx.session.value) {
-
 
       // Новый ID
       case hears_id_new:
-      
-        if (localDb[ctx.message.from.id]) {
-          ctx.session.value = 'Не прошло! В этом чате уже был присвоен ID'
-          ctx.reply(ctx.session.value, level_1_markup)
-        }
-        else {
-          localDb[ctx.message.from.id] = ctx.message.from
-          localDb[ctx.message.from.id].do = {id: ctx.message.text}
-  
-          fs.writeFile(path.join(__dirname, 'local_db.json'), JSON.stringify(localDb, "", 2), 'utf8', (err) => {
-            if (err) throw err;
-            console.log('local_db.json has been saved!');
-          })
-  
-          ctx.session.value = 'Успешно! ID присвоен.'
-          ctx.reply(ctx.session.value, level_1_markup)
-        }
-
+        hears_id_new_do(ctx, localDb, level_1_markup)
         break
-
 
       // Смена ID
       case hears_id_change:
-
-        if (localDb[ctx.message.from.id]) {
-          localDb[ctx.message.from.id].do = {id: ctx.message.text}
-  
-          fs.writeFile(path.join(__dirname, 'local_db.json'), JSON.stringify(localDb, "", 2), 'utf8', (err) => {
-            if (err) throw err;
-            console.log('local_db.json has been saved!');
-          })
-  
-          ctx.session.value = 'Успешно! ID изменен.'
-          ctx.reply(ctx.session.value, level_1_markup)
-        }
-        else {
-          ctx.session.value = 'Не прошло! В этом чате еще не было ID'
-          ctx.reply(ctx.session.value, level_1_markup)
-        }
-        
+        hears_id_change_do(ctx, localDb, level_1_markup)
         break
 
+      // Сумма пополнения баланса для invoice
+      case hears_invoice_balance_sum:
+        ctx.session.invoice = {}
+        ctx.session.invoice.abon = ctx.message.text
+
+        // go next hears
+        //ctx.session.value = hears_invoice_balance_sum2 
+        //ctx.reply(ctx.session.value, level_last_markup).catch(() => undefined)
+
+        // final result
+        yk_sendInvoice(ctx, ykToken)
+        break
 
       default:
-        ctx.session.value = 'Привет. Выбираем нужное, кликаем кнопки.'
+        ctx.session.value = 'Привет \u270B'
         ctx.reply(ctx.session.value, level_1_markup)
         break
   
