@@ -18,7 +18,6 @@ const yk_sendInvoice  = require('./controllers/yk_sendInvoice')
 const tarif_info      = require('./controllers/tarif_info')
 const pay_methods      = require('./controllers/pay_methods')
 
-const hears_id_new_do     = require('./controllers/hears_id_new')
 const hears_id_change_do  = require('./controllers/hears_id_change')
 
 
@@ -126,8 +125,8 @@ bot.use(stateControl(localDb))
 
 // heras match texts ----------------------------------------------------------
 const hears_id_new                = 'Ок. Напишите свой <b>ID</b>\n(числовое значение, полученное Вами при включении)'
-const hears_id_change             = 'Ok. Напишите новый <b>ID</b>.'
-const hears_invoice_balance_sum   = 'Ok. Напишите сумму пополнения баланса <b>Руб</b>.'
+const hears_id_change             = 'Ok. Напишите новый <b>ID</b>'
+const hears_invoice_balance_sum   = 'Ok. Напишите сумму пополнения баланса <b>\u20BD</b>'
 
 
 
@@ -143,7 +142,7 @@ const level_2_1_markup = Extra
   .HTML()
   .markup((m) => m.inlineKeyboard([
     m.callbackButton(tgTools.fixedFromCharCode(0x1F4BC)+' Проверить баланс',      'balance_check'),
-    m.callbackButton(tgTools.fixedFromCharCode(0x1F4B3)+' Пополнить баланс',      'yk_sendInvoice'),
+    m.callbackButton(tgTools.fixedFromCharCode(0x1F4B3)+' Пополнить баланс',      'yk_startInvoice'),
     m.callbackButton(tgTools.fixedFromCharCode(0x1F4DA)+' Сменить тариф',         'tarif_change'),
     m.callbackButton(tgTools.fixedFromCharCode(0x1F334)+' Приостановить услуги',  'tarif_pause'),
     m.callbackButton(tgTools.fixedFromCharCode(0x1F46B)+' Приведи друга',         'friends_invite'),
@@ -201,7 +200,9 @@ const callbackRouter = new Router(({ callbackQuery }) => {
 // level_1 ------------------------------------------------
 callbackRouter.on('abonent', (ctx) => {
   if (ctx.state.role) {
-    ctx.session.value = 'Ваш ID: <b>'+ctx.state.role.do.id+'</b>'
+    ctx.session.value =
+      '<b>'+ctx.state.role.do.fio+'</b>'+
+      '\nВаш ID: <b>'+ctx.state.role.do.id+'</b>'
     ctx.editMessageText(ctx.session.value, level_2_1_markup).catch(() => undefined)
   }
   else {
@@ -211,7 +212,7 @@ callbackRouter.on('abonent', (ctx) => {
 })
 
 callbackRouter.on('not_abonent', (ctx) => {
-  ctx.session.value = 'Я хочу стать абонентом (в разработке)'
+  ctx.session.value = 'Я хочу стать абонентом'
   ctx.editMessageText(ctx.session.value, level_2_2_markup).catch(() => undefined)
 })
 
@@ -245,7 +246,7 @@ callbackRouter.on('balance_check', (ctx) => {
   balance_check(ctx, level_2_1_markup)
 })
 
-callbackRouter.on('yk_sendInvoice', (ctx) => {
+callbackRouter.on('yk_startInvoice', (ctx) => {
   ctx.session.value = hears_invoice_balance_sum  // go hears
   ctx.reply(ctx.session.value, level_last_markup).catch(() => undefined)
 })
@@ -287,8 +288,16 @@ callbackRouter.otherwise((ctx) => ctx.reply('🌯'))
 
 // go start
 bot.start((ctx) => {
-  ctx.session.value = 'Привет \u270B'
-  return ctx.reply(ctx.session.value, level_1_markup)
+  if (ctx.state.role) {
+    ctx.session.value =
+      '<b>'+ctx.state.role.do.fio+'</b>'+
+      '\nВаш ID: <b>'+ctx.state.role.do.id+'</b>'
+    ctx.reply(ctx.session.value, level_2_1_markup)
+  }
+  else {
+    ctx.session.value = 'Привет \u270B'
+    ctx.reply(ctx.session.value, level_1_markup)
+  }
 })
 
 // go callbackRouter
@@ -342,7 +351,7 @@ bot.hears(/.*/, (ctx) => {
 
       // Новый ID
       case hears_id_new:
-        hears_id_new_do(ctx, localDb, level_1_markup)
+        hears_id_change_do(ctx, localDb, level_1_markup)
         break
 
       // Смена ID

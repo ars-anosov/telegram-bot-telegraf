@@ -9,7 +9,7 @@ module.exports = function(ctx, ykToken) {
   console.log(ctx.session)
 
   ctx.session.value = 'Привет \u270B'
-  ctx.reply('Формируем платеж... Всегда можно вернуться на /start')
+  ctx.reply('Формирую платеж... Всегда можно вернуться на /start')
 
   if (ctx.session.invoice) {
 
