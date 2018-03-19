@@ -151,6 +151,14 @@ const level_2_1_markup = Extra
     m.callbackButton(tgTools.fixedFromCharCode(0x2716) +' Назад',                 'go_start')
   ], {columns: 2}))
 
+const level_2_1_tarif_markup = Extra
+  .HTML()
+  .markup((m) => m.inlineKeyboard([
+    m.callbackButton('Без ограничений', 'tarif_change_nolimits'),
+    m.callbackButton('Ограниченный',    'tarif_change_limited'),
+    m.callbackButton(tgTools.fixedFromCharCode(0x2716) +' Назад',                 'abonent')
+  ], {columns: 2}))
+
 const level_2_2_markup = Extra
   .HTML()
   .markup((m) => m.inlineKeyboard([
@@ -223,7 +231,20 @@ callbackRouter.on('id_change', (ctx) => {
 })
 
 callbackRouter.on('tarif_change', (ctx) => {
-  ctx.session.value = 'Сменить тариф (в разработке)'
+// request_type=SRGP_API_UPD_TARIF_TYPE&dog_id=0390017102017&tarif_type=16.7
+// 16.7 - без ограничений
+// 9.7 ограниченный
+  ctx.session.value = 'Выбираем тариф'
+  ctx.editMessageText(ctx.session.value, level_2_1_tarif_markup).catch(() => undefined)
+})
+
+callbackRouter.on('tarif_change_nolimits', (ctx) => {
+  ctx.session.value = 'Меняем на "без ограничений"'
+  ctx.editMessageText(ctx.session.value, level_2_1_markup).catch(() => undefined)
+})
+
+callbackRouter.on('tarif_change_limited', (ctx) => {
+  ctx.session.value = 'Меняем на "ограниченный"'
   ctx.editMessageText(ctx.session.value, level_2_1_markup).catch(() => undefined)
 })
 

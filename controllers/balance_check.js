@@ -22,7 +22,8 @@ module.exports = function(ctx, markup) {
   request(reqOp, (requestErr, requestRes, requestBody) => {
     let resultJson = JSON.parse(requestBody)
     ctx.session.value =
-      'Ваш баланс: <b>'+resultJson[0]+' \u20BD</b>'+
+      'Тариф: <b>'+ctx.state.role.do.tarif+'</b>'+
+      '\nБаланс: <b>'+resultJson[0]+' \u20BD</b>'+
       '\nОплачено дней: <b>'+resultJson[1]+'</b>'
     ctx.editMessageText(ctx.session.value, markup).catch(() => undefined)
   })
