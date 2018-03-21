@@ -14,6 +14,7 @@ const path        = require('path')
 
 module.exports = function(ctx, localDb, markup) {
   console.log('\ncontroller hears_id_change -----------------------------------:')
+  //console.log(ctx)
 
   let reqOp = {  
     url:      'http://89.188.160.0:32180',
@@ -26,6 +27,7 @@ module.exports = function(ctx, localDb, markup) {
     console.log(resultJson)
     if (resultJson.length > 1) {
       localDb[ctx.from.id] = ctx.from
+      localDb[ctx.from.id].chat = ctx.message.chat
       localDb[ctx.from.id].do = {
         id:       ctx.message.text,
         //fio:      iconv.decode(resultJson[0], 'cp1251'),
@@ -61,10 +63,3 @@ module.exports = function(ctx, localDb, markup) {
   ctx.reply('Проверяю ID '+ctx.message.text)
 
 }
-
-
-
-
-// request_type=SRGP_API_UPD_TARIF_TYPE&dog_id=0390017102017&tarif_type=16.7
-// 16.7 - без ограничений
-// 9.7 ограниченный

@@ -16,7 +16,8 @@ const stateControl    = require('./middleware/stateControl')
 const balance_check   = require('./controllers/balance_check')
 const yk_sendInvoice  = require('./controllers/yk_sendInvoice')
 const tarif_info      = require('./controllers/tarif_info')
-const pay_methods      = require('./controllers/pay_methods')
+const tarif_change    = require('./controllers/tarif_change')
+const pay_methods     = require('./controllers/pay_methods')
 
 const hears_id_change_do  = require('./controllers/hears_id_change')
 
@@ -209,8 +210,8 @@ const callbackRouter = new Router(({ callbackQuery }) => {
 callbackRouter.on('abonent', (ctx) => {
   if (ctx.state.role) {
     ctx.session.value =
-      '<b>'+ctx.state.role.do.fio+'</b>'+
-      '\nВаш ID: <b>'+ctx.state.role.do.id+'</b>'
+      'Здравствуй, <b>'+ctx.state.role.do.fio+'</b>'+
+      '\nID: <b>'+ctx.state.role.do.id+'</b>'
     ctx.editMessageText(ctx.session.value, level_2_1_markup).catch(() => undefined)
   }
   else {
@@ -231,21 +232,16 @@ callbackRouter.on('id_change', (ctx) => {
 })
 
 callbackRouter.on('tarif_change', (ctx) => {
-// request_type=SRGP_API_UPD_TARIF_TYPE&dog_id=0390017102017&tarif_type=16.7
-// 16.7 - без ограничений
-// 9.7 ограниченный
   ctx.session.value = 'Выбираем тариф'
   ctx.editMessageText(ctx.session.value, level_2_1_tarif_markup).catch(() => undefined)
 })
 
 callbackRouter.on('tarif_change_nolimits', (ctx) => {
-  ctx.session.value = 'Меняем на "без ограничений"'
-  ctx.editMessageText(ctx.session.value, level_2_1_markup).catch(() => undefined)
+  tarif_change(ctx, localDb, '16.7', level_2_1_markup)
 })
 
 callbackRouter.on('tarif_change_limited', (ctx) => {
-  ctx.session.value = 'Меняем на "ограниченный"'
-  ctx.editMessageText(ctx.session.value, level_2_1_markup).catch(() => undefined)
+  tarif_change(ctx, localDb, '9.7', level_2_1_markup)
 })
 
 callbackRouter.on('tarif_pause', (ctx) => {
