@@ -1,16 +1,24 @@
 // arg
-var nodePath      = process.argv[0]
-var appPath       = process.argv[1]
-var token         = process.argv[2]
-var whIp          = process.argv[3]
-var whPort        = process.argv[4]
-var ykToken       = process.argv[5]
-var whPath        = 'https://'+whIp+':'+whPort+'/'+token
-console.log('webhook path: '+whPath)
+const nodePath        = process.argv[0]
+const appPath         = process.argv[1]
+const token           = process.argv[2]
+const whIp            = process.argv[3]
+const whPort          = process.argv[4]
+const ykToken         = process.argv[5]
+const oauthPort       = process.argv[6]
+const bxClientId      = process.argv[7]
+const bxClientSecret  = process.argv[8]
+
+console.log('Telegram WebHook path:          https://'+whIp+':'+whPort+'/'+token)
 console.log('kassa.yandex.ru provider_token: '+ykToken)
+console.log('Bitrix24 OAuth2 path:           http://'+whIp+':'+oauthPort+'/oauth')
+console.log('Bitrix24 client_id:             '+bxClientId)
+console.log('Bitrix24 client_secret:         '+bxClientSecret)
+console.log('---')
 
 // my modules
 const tgTools         = require('./tools/tg_tools')
+const bxTools         = require('./tools/bx_tools')
 const stateControl    = require('./middleware/stateControl')
 
 const balance_check   = require('./controllers/balance_check')
@@ -18,6 +26,7 @@ const yk_sendInvoice  = require('./controllers/yk_sendInvoice')
 const tarif_info      = require('./controllers/tarif_info')
 const tarif_change    = require('./controllers/tarif_change')
 const pay_methods     = require('./controllers/pay_methods')
+const call_engineer   = require('./controllers/call_engineer')
 
 const hears_id_change_do  = require('./controllers/hears_id_change')
 
@@ -88,6 +97,16 @@ httpsServer.listen(whPort, () => {
   console.log('express app started on https server, port: '+whPort)
 })
 
+// Надо для ответов на OAuth2
+var app2 = express()
+app2.get('/oauth', function (req, res) {
+  bxTools.oauthRes(bxClientId, bxClientSecret, req.query, localDb)
+  res.send('OAuth2 data accepted.')
+})
+app2.listen(oauthPort, () => {
+  console.log('express app2 started on http server, port: '+oauthPort)
+  //bxTools.oauthReq(bxClientId)
+})
 
 
 
@@ -255,8 +274,13 @@ callbackRouter.on('friends_invite', (ctx) => {
 })
 
 callbackRouter.on('call_egineer', (ctx) => {
-  ctx.session.value = 'Вызов специалиста (в разработке)'
-  ctx.editMessageText(ctx.session.value, level_2_1_markup).catch(() => undefined)
+  if (localDb.oauth2) {
+    call_engineer(ctx, level_2_1_markup, localDb.oauth2.access_token)
+  }
+  else {
+    ctx.session.value = 'Нет связи с Bitrix24'
+    ctx.editMessageText(ctx.session.value, level_2_1_markup).catch(() => undefined)
+  }
 })
 
 callbackRouter.on('balance_check', (ctx) => {

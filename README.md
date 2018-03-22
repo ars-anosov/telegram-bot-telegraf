@@ -10,14 +10,18 @@ Telegram bot на базе фреймворка [telegraf](https://github.com/te
 ## Установка / Использование
 
 ### Окружение
-Работал в следующем окружении (для себя правим на нужные IP):
+Работал в следующем окружении:
 
 - **telegram-bot-telegraf** - Docker-контейнер NodeJS v.9 для разработки. Деплой утилитой **rsync**.
-- **89.188.160.102** - Pruduction машина. Доступна по **HTTPS**. Умеет **rsync**.
-- **TOKEN** - выдает @BotFather
-- **PROVIDER_TOKEN** - привязка платежной системы к боту через @BotFather
+- **TOKEN** - токен бота, выдает @BotFather
+- **WEBHOOK_IP** - IP Pruduction машины. Доступна по **HTTPS**, **HTTP**. Умеет **rsync**.
+- **WEBHOOK_PORT** - https порт на Pruduction машине для WebHook от Telegram
+- **PROVIDER_TOKEN** - токен платежной системы, привязанной к боту через @BotFather
+- **BX_OAUTH_PORT** - http порт на Pruduction машине для OAuth2 запросов от Bitrix24
+- **BX_CLIENT_ID** - client_id приложения на Bitrix24
+- **BX_CLIENT_SECRET** - client_secret приложения на Bitrix24
 
-Поддерживаемые TCP-порты: 443, 80, 88, 8443 (см. [офф.док.](https://core.telegram.org/bots/api) метод "setWebhook").
+Разрешенные TCP-порты: 443, 80, 88, 8443 (см. [офф.док.](https://core.telegram.org/bots/api) метод "setWebhook").
 ```
 cd telegram-bot-telegraf
 
@@ -26,8 +30,13 @@ sudo docker run \
   -v $PWD:/telegram-bot-telegraf \
   -w /telegram-bot-telegraf \
   --publish=8443:8443 \
-  --env="TOKEN=INSERT_BOT_TOKEN_HERE" \
-  --env="PROVIDER_TOKEN=INSERT_PROVIDER_TOKEN_HERE" \
+  --env="TOKEN=123456789:abcdefABCDEFabcdefABCDEFabcdefABCDE" \
+  --env="WEBHOOK_IP=89.188.100.200" \
+  --env="WEBHOOK_PORT=8443" \
+  --env="PROVIDER_TOKEN=123456789:LIVE:1234" \
+  --env="BX_OAUTH_PORT=8010" \
+  --env="BX_CLIENT_ID=local.1ab2345678cd90.12345678" \
+  --env="BX_CLIENT_SECRET=abcdefABCDEF123abcdefABCDEF123abcdefABCDEF123abcde" \
   -it \
   node:9 bash
 ```
@@ -45,14 +54,14 @@ mkdir cert && cd cert
 
 Офф. документация - https://core.telegram.org/bots/self-signed (не делал).
 
-Создавал x.509 PKI по порядку. Ниже CN=89.188.160.102 меняем на свой внешний IP.
+Создавал x.509 PKI по порядку. Ниже CN=<INSERT_WEBHOOK_IP_HERE> меняем на свой внешний IP.
 
 ### CA (Certification Authority)
 ```
 openssl genrsa -out ca.key 4096
 
 openssl req -new -x509 -days 10950 -key ca.key -out ca.pem -outform PEM \
-        -subj "/C=RU/ST=Moscow/L=Moscow/O=Ars DevOps/CN=89.188.160.102"
+        -subj "/C=RU/ST=Moscow/L=Moscow/O=Ars DevOps/CN=<INSERT_WEBHOOK_IP_HERE>"
 ```
 
 ### Ключи для телеграм-бота
@@ -63,7 +72,7 @@ openssl genrsa -out client.key 4096
 запрос на подпись ".csr" (certificate signing request)
 ```
 openssl req -new -key client.key -out client.csr \
-        -subj "/C=RU/ST=Moscow/L=Moscow/O=Ars DevOps/CN=89.188.160.102"
+        -subj "/C=RU/ST=Moscow/L=Moscow/O=Ars DevOps/CN=<INSERT_WEBHOOK_IP_HERE>"
 ```
 подписанный сертификат ".pem"
 ```
@@ -78,13 +87,13 @@ openssl x509 -req -days 10950 -CA ca.pem -CAkey ca.key -set_serial 01 \
 В контейнере - не забыть сделать port redirect с реального EXTERNAL IP. Запускаем:
 ```
 npm install
-node index.js $TOKEN <INSERT_EXTERNAL_IP_HERE> 8443 $PROVIDER_TOKEN
+node index.js $TOKEN $WEBHOOK_IP $WEBHOOK_PORT $PROVIDER_TOKEN $BX_OAUTH_PORT $BX_CLIENT_ID $BX_CLIENT_SECRET
 ```
 
 На production машине:
 ```
 npm install
-node index.js <INSERT_BOT_TOKEN_HERE> 89.188.160.102 8443 <INSERT_PROVIDER_TOKEN_HERE>
+node index.js <INSERT_TOKEN> <INSERT_WEBHOOK_IP> <INSERT_WEBHOOK_PORT> <INSERT_PROVIDER_TOKEN> <INSERT_BX_OAUTH_PORT> <INSERT_BX_CLIENT_ID> <INSERT_BX_CLIENT_SECRET>
 ```
 
 
@@ -103,8 +112,8 @@ apt install rsync
 
 # содержимое id_rsa.pub вписываем на удаленной машине в authorized_keys
 ssh-keygen
-scp /root/.ssh/id_rsa.pub arseny@89.188.160.102:~/
-ssh -t arseny@89.188.160.102 'cat id_rsa.pub >> ~/.ssh/authorized_keys'
+scp /root/.ssh/id_rsa.pub arseny@<INSERT_WEBHOOK_IP_HERE>:~/
+ssh -t arseny@<INSERT_WEBHOOK_IP_HERE> 'cat id_rsa.pub >> ~/.ssh/authorized_keys'
 
 # Deploy
 gulp deploy
@@ -125,10 +134,10 @@ https://api.telegram.org/bot<INSERT_BOT_TOKEN_HERE>/getWebhookInfo
 Пара "ручных" запросов
 ```
 # запрос к боту
-curl -v -k https://89.188.160.102:8443/
+curl -v -k https://<INSERT_WEBHOOK_IP_HERE>:<INSERT_WEBHOOK_PORT_HERE>/
 
 # установить webhook
-curl -F "url=https://89.188.160.102:8443/<INSERT_BOT_TOKEN_HERE>" \
+curl -F "url=https://<INSERT_WEBHOOK_IP_HERE>:<INSERT_WEBHOOK_PORT_HERE>/<INSERT_BOT_TOKEN_HERE>" \
      -F "certificate=@cert/client.pem" \
      https://api.telegram.org/bot<INSERT_BOT_TOKEN_HERE>/setWebhook
 ```

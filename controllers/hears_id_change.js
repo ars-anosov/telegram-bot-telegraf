@@ -38,6 +38,7 @@ module.exports = function(ctx, localDb, markup) {
         tarif:    resultJson[4],
       }
 
+      // Update локальной базы
       fs.writeFile(path.join(__dirname, '../local_db.json'), JSON.stringify(localDb, "", 2), 'utf8', (err) => {
         if (err) throw err;
         console.log('local_db.json has been saved!')
