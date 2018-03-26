@@ -23,35 +23,43 @@ module.exports = function(ctx, localDb, markup) {
   
   reqOp.form = {request_type: 'SRGP_API_DOG_INFO', dog_id: ctx.message.text}
   request(reqOp, (requestErr, requestRes, requestBody) => {
+    console.log('SRGP_API_DOG_INFO')
     let resultJson = JSON.parse(requestBody)
     console.log(resultJson)
     if (resultJson.length > 1) {
-      localDb[ctx.from.id] = ctx.from
-      localDb[ctx.from.id].chat = ctx.message.chat
-      localDb[ctx.from.id].do = {
-        id:       ctx.message.text,
-        //fio:      iconv.decode(resultJson[0], 'cp1251'),
-        fio:      resultJson[0],
-        phone:    resultJson[1],
-        email:    resultJson[2],
-        balance:  resultJson[3],
-        tarif:    resultJson[4],
+      if (resultJson[0] && resultJson[1] && resultJson[2] && resultJson[3] && resultJson[4]) {
+        localDb[ctx.from.id] = ctx.from
+        localDb[ctx.from.id].chat = ctx.message.chat
+        localDb[ctx.from.id].do = {
+          id:       ctx.message.text,
+          //fio:      iconv.decode(resultJson[0], 'cp1251'),
+          fio:      resultJson[0],
+          phone:    resultJson[1],
+          email:    resultJson[2],
+          balance:  resultJson[3],
+          tarif:    resultJson[4],
+        }
+
+        // Update локальной базы
+        fs.writeFile(path.join(__dirname, '../local_db.json'), JSON.stringify(localDb, "", 2), 'utf8', (err) => {
+          if (err) throw err;
+          console.log('local_db.json has been saved!')
+          ctx.session.value = 'Успешно! ID изменен на <b>'+ctx.message.text+'</b>.'
+          ctx.reply(ctx.session.value, markup)
+        })
+
+        // Связка telegram_id --- номер договора
+        reqOp.form = {request_type: 'SRGP_API_UPD_TEL_ID', dog_id: ctx.message.text, telegram_id: ctx.from.id}
+        request(reqOp, (requestErr, requestRes, requestBody) => {
+          console.log('SRGP_API_UPD_TEL_ID')
+          console.log(requestBody)
+        })
       }
-
-      // Update локальной базы
-      fs.writeFile(path.join(__dirname, '../local_db.json'), JSON.stringify(localDb, "", 2), 'utf8', (err) => {
-        if (err) throw err;
-        console.log('local_db.json has been saved!')
-        ctx.session.value = 'Успешно! ID изменен на <b>'+ctx.message.text+'</b>.'
-        ctx.reply(ctx.session.value, markup)
-      })
-
-      // Связка telegram_id --- номер договора
-      reqOp.form = {request_type: 'SRGP_API_UPD_TEL_ID', dog_id: ctx.message.text, telegram_id: ctx.from.id}
-      request(reqOp, (requestErr, requestRes, requestBody) => {
-        console.log('SRGP_API_UPD_TEL_ID')
-        console.log(requestBody)
-      })
+      else {
+        ctx.reply('Не прошло! CRM не отвечает.')
+        ctx.session.value = 'Привет \u270B'
+        ctx.reply(ctx.session.value, markup)        
+      }
 
     }
     else {

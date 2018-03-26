@@ -26,7 +26,8 @@ const yk_sendInvoice  = require('./controllers/yk_sendInvoice')
 const tarif_info      = require('./controllers/tarif_info')
 const tarif_change    = require('./controllers/tarif_change')
 const pay_methods     = require('./controllers/pay_methods')
-const call_engineer   = require('./controllers/call_engineer')
+const engineer_search = require('./controllers/engineer_search')
+const engineer_invite = require('./controllers/engineer_invite')
 
 const hears_id_change_do  = require('./controllers/hears_id_change')
 
@@ -97,7 +98,7 @@ httpsServer.listen(whPort, () => {
   console.log('express app started on https server, port: '+whPort)
 })
 
-// Надо для ответов на OAuth2
+// Первичный ответ на OAuth2
 var app2 = express()
 app2.get('/oauth', function (req, res) {
   bxTools.oauthRes(bxClientId, bxClientSecret, req.query, localDb)
@@ -105,7 +106,12 @@ app2.get('/oauth', function (req, res) {
 })
 app2.listen(oauthPort, () => {
   console.log('express app2 started on http server, port: '+oauthPort)
-  //bxTools.oauthReq(bxClientId)
+
+// Обновляю OAuth2 access_token каждые 10 минут
+  bxTools.oauthRefrash(bxClientId, bxClientSecret, localDb)
+  setInterval(() => {
+    bxTools.oauthRefrash(bxClientId, bxClientSecret, localDb)
+  }, 600000)
 })
 
 
@@ -166,7 +172,7 @@ const level_2_1_markup = Extra
     m.callbackButton(tgTools.fixedFromCharCode(0x1F4DA)+' Сменить тариф',         'tarif_change'),
     m.callbackButton(tgTools.fixedFromCharCode(0x1F334)+' Приостановить услуги',  'tarif_pause'),
     m.callbackButton(tgTools.fixedFromCharCode(0x1F46B)+' Приведи друга',         'friends_invite'),
-    m.callbackButton(tgTools.fixedFromCharCode(0x1F697)+' Вызов специалиста',     'call_egineer'),
+    m.callbackButton(tgTools.fixedFromCharCode(0x1F697)+' Вызов специалиста',     'engineer_search'), // внутри route = engineer_invite
     m.callbackButton(tgTools.fixedFromCharCode(0x26F3) +' У меня другой ID',      'id_change'),
     m.callbackButton(tgTools.fixedFromCharCode(0x2716) +' Назад',                 'go_start')
   ], {columns: 2}))
@@ -219,7 +225,8 @@ const callbackRouter = new Router(({ callbackQuery }) => {
   return {
     route: parts[0],
     state: {
-      rou: 'routed'
+      rou1: parts[1],
+      rou2: parts[2]
     }
   }
 
@@ -273,9 +280,19 @@ callbackRouter.on('friends_invite', (ctx) => {
   ctx.editMessageText(ctx.session.value, level_2_1_markup).catch(() => undefined)
 })
 
-callbackRouter.on('call_egineer', (ctx) => {
+callbackRouter.on('engineer_search', (ctx) => {
   if (localDb.oauth2) {
-    call_engineer(ctx, level_2_1_markup, localDb.oauth2.access_token)
+    engineer_search(ctx, level_2_1_markup, localDb.oauth2.access_token)
+  }
+  else {
+    ctx.session.value = 'Нет связи с Bitrix24'
+    ctx.editMessageText(ctx.session.value, level_2_1_markup).catch(() => undefined)
+  }
+})
+
+callbackRouter.on('engineer_invite', (ctx) => {
+  if (localDb.oauth2) {
+    engineer_invite(ctx, level_2_1_markup, localDb.oauth2.access_token)
   }
   else {
     ctx.session.value = 'Нет связи с Bitrix24'
