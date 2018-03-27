@@ -5,67 +5,29 @@
 module.exports = function(ctx, markup) {
   console.log('controller pay_methods -----------------------------------------:')
 
-  ctx.session.value = 'Способы оплаты (в разработке)'
-//'            <a href="https://kassa.yandex.ru/payments#cards" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-1.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#cards" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-2.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#cards" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-3.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#cards" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-4.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#cards" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-22.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#emoney" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-5.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#emoney" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-6.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#emoney" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-7.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#bank" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-8.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#bank" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-9.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#bank" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-10.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#bank" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-11.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#phone" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-12.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#phone" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-13.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#phone" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-14.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#phone" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-21.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#credit" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-16.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#cash" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-18.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#cash" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-19.png" alt="Alt">\n'+
-//'            </a>\n'+
-//'            <a href="https://kassa.yandex.ru/payments#cash" target="_blank" class="payment__item">\n'+
-//'              <img src="http://xn--80ahqgegdcb.xn--p1ai/assets/images/pay-icons/pay-20.png" alt="Alt">\n'+
-//'            </a>\n'
+  ctx.session.value = 'Банковские карты\n'+
+'<a href="https://kassa.yandex.ru/payments.html">Карта Мир</a>\n'+
+'<a href="https://kassa.yandex.ru/payments.html">Карты Visa, Mastercard, Maestro</a>\n'+
+'<a href="https://kassa.yandex.ru/payments.html">Apple Pay</a>\n'+
+'\nЭлектронные деньги\n'+
+'<a href="https://kassa.yandex.ru/payments-emoney.html">Яндекс Деньги</a>\n'+
+'<a href="https://kassa.yandex.ru/payments-emoney.html">WebMoney</a>\n'+
+'<a href="https://kassa.yandex.ru/payments-emoney.html">QIWI</a>\n'+
+'\nИнтернет-банкинг\n'+
+'<a href="https://kassa.yandex.ru/payments-internet-bank.html">Сбербанк Онлайн</a>\n'+
+'<a href="https://kassa.yandex.ru/payments-internet-bank.html">Альфа-Банк</a>\n'+
+'<a href="https://kassa.yandex.ru/payments-internet-bank.html">Промсвязьбанк</a>\n'+
+'<a href="https://kassa.yandex.ru/payments-internet-bank.html">ЕРИП</a>\n'+
+'\nБаланс телефона\n'+
+'<a href="https://kassa.yandex.ru/payments-phone.html">Билайн</a>\n'+
+'<a href="https://kassa.yandex.ru/payments-phone.html">Мегафон</a>\n'+
+'<a href="https://kassa.yandex.ru/payments-phone.html">МТС</a>\n'+
+'<a href="https://kassa.yandex.ru/payments-phone.html">Теле2</a>\n'+
+'<a href="https://kassa.yandex.ru/payments-phone.html">Билайн</a>\n'+
+'\nКредитование\n'+
+'<a href="https://kassa.yandex.ru/payments-credit.html">КупиВкредит</a>\n'+
+'\nНаличные\n'+
+'<a href="https://kassa.yandex.ru/payments-cash.html">Связной, Евросеть и другие</a>'
 
   ctx.editMessageText(ctx.session.value, markup).catch(() => undefined)
 

@@ -6,21 +6,12 @@ const fs          = require('fs')
 const path        = require('path')
 
 
-var oauthReq =  function(bxClientId) {
-  console.log('\bx_tools oauthReq ---------------------------------------------:')
-
-  let reqOp = {  
-    url:      'https://srgp.bitrix24.ru/oauth/authorize/?client_id='+bxClientId
-  }
-  request(reqOp, (requestErr, requestRes, requestBody) => {
-    console.log(requestRes)
-  })
-
-}
 
 // https://dev.1c-bitrix.ru/learning/course/index.php?COURSE_ID=99&LESSON_ID=2486#full_auth
-var oauthRes =  function(bxClientId, bxClientSecret, args, localDb) {
+var oauthRes =  function(args, localDb) {
   console.log('\nbx_tools oauthRes --------------------------------------------:')
+  let bxClientId      = localDb.bxData.clientId
+  let bxClientSecret  = localDb.bxData.clientSecret
 
   let reqOp = {  
     url:      'https://oauth.bitrix.info/oauth/token/?grant_type=authorization_code&client_id='+bxClientId+'&client_secret='+bxClientSecret+'&code='+args.code
@@ -43,8 +34,10 @@ var oauthRes =  function(bxClientId, bxClientSecret, args, localDb) {
 }
 
 // https://dev.1c-bitrix.ru/learning/course/index.php?COURSE_ID=99&LESSON_ID=2486#full_auth
-var oauthRefrash =  function(bxClientId, bxClientSecret, localDb) {
+var oauthRefrash =  function(localDb) {
   console.log('\nbx_tools oauthRefrash ----------------------------------------:')
+  let bxClientId      = localDb.bxData.clientId
+  let bxClientSecret  = localDb.bxData.clientSecret
 
   let reqOp = {  
     url:      'https://oauth.bitrix.info/oauth/token/?grant_type=refresh_token&client_id='+bxClientId+'&client_secret='+bxClientSecret+'&refresh_token='+localDb.oauth2.refresh_token
@@ -66,7 +59,7 @@ var oauthRefrash =  function(bxClientId, bxClientSecret, localDb) {
       console.log('!!! ------------------------------------------- !!!')
       console.log('!!! --- Bitrix24 access_token NOT REFRASHED --- !!!')
       console.log('!!! ')
-      console.log('!!! Admin open browser ==> https://srgp.bitrix24.ru/oauth/authorize/?client_id='+bxClientId)
+      console.log('!!! Admin open browser ==> '+localDb.bxData.apiUrl+'/oauth/authorize/?client_id='+bxClientId)
       console.log('!!! ------------------------------------------- !!!')
     }
   })
@@ -80,6 +73,6 @@ var oauthRefrash =  function(bxClientId, bxClientSecret, localDb) {
 
 
 
-module.exports.oauthReq       = oauthReq
+
 module.exports.oauthRes       = oauthRes
 module.exports.oauthRefrash   = oauthRefrash

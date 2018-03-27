@@ -10,8 +10,9 @@ const tgTools         = require('../tools/tg_tools')
 
 
 
-module.exports = function(ctx, markup, auth) {
+module.exports = function(ctx, markup, localDb) {
   console.log('\ncontroller engineer_search -----------------------------------:')
+
   ctx.editMessageText('Поиск свободного инженера...', markup).catch(() => undefined)
 
   let curDate = new Date()
@@ -55,12 +56,12 @@ module.exports = function(ctx, markup, auth) {
   // https://dev.1c-bitrix.ru/rest_help/tasks/task/item/list.php
   curDate = new Date()
   let reqOp = {
-    url:      'https://srgp.bitrix24.ru/rest/task.item.list.json',
+    url:      localDb.bxData.apiUrl+'/rest/task.item.list.json',
     method:   'POST',
     formData: {
-      'auth': auth,
+      'auth': localDb.oauth2.access_token,
       'O[DEADLINE]': 'asc',
-      'F[RESPONSIBLE_ID]': 105,
+      'F[RESPONSIBLE_ID]': localDb.bxData.engineerId,
       'F[ONLY_ROOT_TASKS]': 'Y',
       'F[>DEADLINE]': curDate.getFullYear()+'-'+(curDate.getMonth()+1)+'-'+curDate.getDate(),
       'P[]': ''

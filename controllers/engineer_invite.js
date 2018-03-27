@@ -2,24 +2,21 @@
 
 const request = require('request')
 
-//var iconv = require('iconv-lite')
-//iconv.skipDecodeWarning = true
 
 
-
-module.exports = function(ctx, markup, auth) {
+module.exports = function(ctx, markup, localDb) {
   console.log('\ncontroller engineer_invite -----------------------------------:')
-  ctx.editMessageText('Оформляем заявку на '+ctx.state.rou2+'...', markup).catch(() => undefined)
 
-  // https://dev.1c-bitrix.ru/rest_help/tasks/task/item/list.php
-  let curDate = new Date()
+  ctx.editMessageText('Оформляем заявку на выезд '+ctx.state.rou2+'...', markup).catch(() => undefined)
+
+  // https://dev.1c-bitrix.ru/rest_help/tasks/task/item/add.php
   let inviteDate = new Date(ctx.state.rou2)
 
   let reqOp = {
-    url:      'https://srgp.bitrix24.ru/rest/task.item.add.json',
+    url:      localDb.bxData.apiUrl+'/rest/task.item.add.json',
     method:   'POST',
     formData: {
-      'auth': auth,
+      'auth': localDb.oauth2.access_token,
       'TASKDATA[TITLE]': 'Telegram. Вызов специалиста.',
       'TASKDATA[RESPONSIBLE_ID]': ctx.state.rou1,
       'TASKDATA[DEADLINE]': inviteDate.toISOString(),
@@ -32,15 +29,20 @@ module.exports = function(ctx, markup, auth) {
     let resultJson = JSON.parse(requestBody)
 
     if (resultJson.result) {
-      //console.log(resultJson)
-      ctx.session.value = 'Специалист '+ctx.state.rou1+', дата '+ctx.state.rou2+'\nЗаявка оформлена.'
+      console.log(resultJson)
+
+      ctx.session.value = 'Вызов специалист '+ctx.state.rou1+', дата '+ctx.state.rou2+'.\nЗаявка #'+resultJson.result+' оформлена.\n\nЖдите звонка, специалист согласует время приезда.'
+      ctx.reply(ctx.session.value).catch(() => undefined)
+
+      ctx.session.value = 'Специалист вызван.'
+      ctx.reply(ctx.session.value, markup).catch(() => undefined)
     }
 
     else {
       ctx.session.value = 'bitrix24 не ответил'
+      ctx.reply(ctx.session.value, markup).catch(() => undefined)
     }
 
-    ctx.editMessageText(ctx.session.value, markup).catch(() => undefined)
   })
 
 }

@@ -9,6 +9,10 @@ const oauthPort       = process.argv[6]
 const bxClientId      = process.argv[7]
 const bxClientSecret  = process.argv[8]
 
+const bxApiUrl        = 'https://srgp.bitrix24.ru'
+const bxEngineerId    = 105
+const bxManagerId     = 119
+
 console.log('Telegram WebHook path:          https://'+whIp+':'+whPort+'/'+token)
 console.log('kassa.yandex.ru provider_token: '+ykToken)
 console.log('Bitrix24 OAuth2 path:           http://'+whIp+':'+oauthPort+'/oauth')
@@ -21,15 +25,18 @@ const tgTools         = require('./tools/tg_tools')
 const bxTools         = require('./tools/bx_tools')
 const stateControl    = require('./middleware/stateControl')
 
+const id_change       = require('./controllers/id_change')
 const balance_check   = require('./controllers/balance_check')
 const yk_sendInvoice  = require('./controllers/yk_sendInvoice')
-const tarif_info      = require('./controllers/tarif_info')
 const tarif_change    = require('./controllers/tarif_change')
-const pay_methods     = require('./controllers/pay_methods')
+const tarif_pause     = require('./controllers/tarif_pause')
 const engineer_search = require('./controllers/engineer_search')
 const engineer_invite = require('./controllers/engineer_invite')
+const friends_invite  = require('./controllers/friends_invite')
 
-const hears_id_change_do  = require('./controllers/hears_id_change')
+const tarif_info      = require('./controllers/tarif_info')
+const new_abonent     = require('./controllers/new_abonent')
+const pay_methods     = require('./controllers/pay_methods')
 
 
 // fs
@@ -51,6 +58,13 @@ const bot         = new Telegraf(token)
 
 // localDb
 var localDb = JSON.parse( fs.readFileSync( path.join(__dirname, 'local_db.json') ) )
+localDb.bxData = {
+  'clientId':       bxClientId,
+  'clientSecret':   bxClientSecret,
+  'apiUrl':         bxApiUrl,
+  'engineerId':     bxEngineerId,
+  'managerId':      bxManagerId
+}
 
 
 
@@ -101,16 +115,16 @@ httpsServer.listen(whPort, () => {
 // Первичный ответ на OAuth2
 var app2 = express()
 app2.get('/oauth', function (req, res) {
-  bxTools.oauthRes(bxClientId, bxClientSecret, req.query, localDb)
+  bxTools.oauthRes(req.query, localDb)
   res.send('OAuth2 data accepted.')
 })
 app2.listen(oauthPort, () => {
   console.log('express app2 started on http server, port: '+oauthPort)
 
 // Обновляю OAuth2 access_token каждые 10 минут
-  bxTools.oauthRefrash(bxClientId, bxClientSecret, localDb)
+  bxTools.oauthRefrash(localDb)
   setInterval(() => {
-    bxTools.oauthRefrash(bxClientId, bxClientSecret, localDb)
+    bxTools.oauthRefrash(localDb)
   }, 600000)
 })
 
@@ -153,8 +167,12 @@ bot.use(stateControl(localDb))
 const hears_id_new                = 'Ок. Напишите свой <b>ID</b>\n(числовое значение, полученное Вами при включении)'
 const hears_id_change             = 'Ok. Напишите новый <b>ID</b>'
 const hears_invoice_balance_sum   = 'Ok. Напишите сумму пополнения баланса <b>\u20BD</b>'
-
-
+const hears_friend_name           = 'Ok. Как зовут друга?'
+const hears_friend_phone          = 'Ok. Напишите телефон Вашего друга'
+const hears_pause_from            = 'Ok. Напишите с какой даты приостановить услуги\nФормат <b>ГГГГ-ММ-ДД</b> (например 2018-11-15)'
+const hears_pause_to              = 'Ok. Напишите до какой даты приостановить услуги\nФормат <b>ГГГГ-ММ-ДД</b> (например 2018-11-15)'
+const hears_newAbon_name          = 'Ok. Как Вас зовут?'
+const hears_newAbon_phone         = 'Ok. Напишите как с вами можно связаться'
 
 // markups --------------------------------------------------------------------
 const level_1_markup = Extra
@@ -189,7 +207,7 @@ const level_2_2_markup = Extra
   .HTML()
   .markup((m) => m.inlineKeyboard([
     m.callbackButton(tgTools.fixedFromCharCode(0x1F4DA)+' Тарифы и услуги',       'tarif_info'),
-    m.callbackButton(tgTools.fixedFromCharCode(0x1F4CC)+' Заявка на включение',   'new_user_request'),
+    m.callbackButton(tgTools.fixedFromCharCode(0x1F4CC)+' Заявка на включение',   'new_abon_request'),
     m.callbackButton(tgTools.fixedFromCharCode(0x1F4B8)+' Способы оплаты',        'pay_methods'),
     m.callbackButton(tgTools.fixedFromCharCode(0x2754) +' Вопросы',               'issues'),
     m.callbackButton(tgTools.fixedFromCharCode(0x2716) +' Назад',                 'go_start')
@@ -271,33 +289,21 @@ callbackRouter.on('tarif_change_limited', (ctx) => {
 })
 
 callbackRouter.on('tarif_pause', (ctx) => {
-  ctx.session.value = 'Приостановить услуги (в разработке)'
-  ctx.editMessageText(ctx.session.value, level_2_1_markup).catch(() => undefined)
+  ctx.session.value = hears_pause_from
+  ctx.reply(ctx.session.value, level_last_markup).catch(() => undefined)
 })
 
 callbackRouter.on('friends_invite', (ctx) => {
-  ctx.session.value = 'Приведи друга (в разработке)'
-  ctx.editMessageText(ctx.session.value, level_2_1_markup).catch(() => undefined)
+  ctx.session.value = hears_friend_name
+  ctx.reply(ctx.session.value, level_last_markup).catch(() => undefined)
 })
 
 callbackRouter.on('engineer_search', (ctx) => {
-  if (localDb.oauth2) {
-    engineer_search(ctx, level_2_1_markup, localDb.oauth2.access_token)
-  }
-  else {
-    ctx.session.value = 'Нет связи с Bitrix24'
-    ctx.editMessageText(ctx.session.value, level_2_1_markup).catch(() => undefined)
-  }
+  engineer_search(ctx, level_2_1_markup, localDb)
 })
 
 callbackRouter.on('engineer_invite', (ctx) => {
-  if (localDb.oauth2) {
-    engineer_invite(ctx, level_2_1_markup, localDb.oauth2.access_token)
-  }
-  else {
-    ctx.session.value = 'Нет связи с Bitrix24'
-    ctx.editMessageText(ctx.session.value, level_2_1_markup).catch(() => undefined)
-  }
+  engineer_invite(ctx, level_2_1_markup, localDb)
 })
 
 callbackRouter.on('balance_check', (ctx) => {
@@ -314,9 +320,9 @@ callbackRouter.on('tarif_info', (ctx) => {
   tarif_info(ctx, level_2_2_markup)
 })
 
-callbackRouter.on('new_user_request', (ctx) => {
-  ctx.session.value = 'Заявка на включение (в разработке)'
-  ctx.editMessageText(ctx.session.value, level_2_2_markup).catch(() => undefined)
+callbackRouter.on('new_abon_request', (ctx) => {
+  ctx.session.value = hears_newAbon_name
+  ctx.reply(ctx.session.value, level_last_markup).catch(() => undefined)
 })
 
 callbackRouter.on('issues', (ctx) => {
@@ -348,8 +354,8 @@ callbackRouter.otherwise((ctx) => ctx.reply('🌯'))
 bot.start((ctx) => {
   if (ctx.state.role) {
     ctx.session.value =
-      '<b>'+ctx.state.role.do.fio+'</b>'+
-      '\nВаш ID: <b>'+ctx.state.role.do.id+'</b>'
+      'Здравствуй, <b>'+ctx.state.role.do.fio+'</b>'+
+      '\nID: <b>'+ctx.state.role.do.id+'</b>'
     ctx.reply(ctx.session.value, level_2_1_markup)
   }
   else {
@@ -409,25 +415,64 @@ bot.hears(/.*/, (ctx) => {
 
       // Новый ID
       case hears_id_new:
-        hears_id_change_do(ctx, localDb, level_1_markup)
+        id_change(ctx, localDb, level_1_markup)
         break
 
       // Смена ID
       case hears_id_change:
-        hears_id_change_do(ctx, localDb, level_1_markup)
+        id_change(ctx, localDb, level_1_markup)
         break
 
       // Сумма пополнения баланса для invoice
       case hears_invoice_balance_sum:
         ctx.session.invoice = {}
         ctx.session.invoice.abon = ctx.message.text
+        yk_sendInvoice(ctx, ykToken)
+        break
+
+      // Приведи друга (Имя)
+      case hears_friend_name:
+        ctx.session.friend = {}
+        ctx.session.friend.fio = ctx.message.text
 
         // go next hears
-        //ctx.session.value = hears_invoice_balance_sum2 
-        //ctx.reply(ctx.session.value, level_last_markup).catch(() => undefined)
+        ctx.session.value = hears_friend_phone 
+        ctx.reply(ctx.session.value, level_last_markup).catch(() => undefined)
+        break
+      // Приведи друга (Телефон)
+      case hears_friend_phone:
+        ctx.session.friend.phone = ctx.message.text
+        friends_invite(ctx, level_2_1_markup, localDb)
+        break
 
-        // final result
-        yk_sendInvoice(ctx, ykToken)
+      // Приостановаить услуги (from)
+      case hears_pause_from:
+        ctx.session.pause = {}
+        ctx.session.pause.from = ctx.message.text
+
+        // go next hears
+        ctx.session.value = hears_pause_to 
+        ctx.reply(ctx.session.value, level_last_markup).catch(() => undefined)
+        break
+      // Приостановаить услуги (to)
+      case hears_pause_to:
+        ctx.session.pause.to = ctx.message.text
+        tarif_pause(ctx, level_2_1_markup, localDb)
+        break
+
+      // Заявка на включение (Имя)
+      case hears_newAbon_name:
+        ctx.session.newAbon = {}
+        ctx.session.newAbon.fio = ctx.message.text
+
+        // go next hears
+        ctx.session.value = hears_newAbon_phone 
+        ctx.reply(ctx.session.value, level_last_markup).catch(() => undefined)
+        break
+      // Заявка на включение (контактные данные)
+      case hears_newAbon_phone:
+        ctx.session.newAbon.phone = ctx.message.text
+        new_abonent(ctx, level_2_2_markup, localDb)
         break
 
       default:
