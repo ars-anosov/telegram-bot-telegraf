@@ -5,7 +5,11 @@
 ## Обзор
 Telegram bot на базе фреймворка [telegraf](https://github.com/telegraf/telegraf).
 
+![Image](https://github.com/ars-anosov/telegram-bot-telegraf/blob/master/images/drawio_main.png)
 
+1. Принимает платежи через [Яндекс Кассу](https://kassa.yandex.ru/)
+2. Взаимодействует с API клиентской [bitrix24](https://www.bitrix24.ru/)
+3. Взаимодействует с инфраструктурой клиента через его CRM систему
 
 ## Установка / Использование
 
