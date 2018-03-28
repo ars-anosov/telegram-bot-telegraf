@@ -17,13 +17,21 @@ module.exports = function(ctx, markup, localDb) {
     method:   'POST',
     formData: {
       'auth': localDb.oauth2.access_token,
-      'TASKDATA[TITLE]': 'Telegram. Заявка на включение.',
+      'TASKDATA[TITLE]':          'ИНТ_Заявка на включение',
+      'TASKDATA[DESCRIPTION]':    'Заявка на включение через Telegram'+
+'\nФИО: '+ctx.session.newAbon.fio+
+'\nКонтактные данные: '+ctx.session.newAbon.phone,
+      'TASKDATA[DEADLINE]':       curDate.toISOString(),
+      'TASKDATA[AUDITORS][0]':    localDb.bxData.managerId,
+      'TASKDATA[AUDITORS][1]':    12,  // Оксана
+      'TASKDATA[AUDITORS][2]':    2,   // Игорь
+      'TASKDATA[AUDITORS][3]':    1,   // Максим
       'TASKDATA[RESPONSIBLE_ID]': localDb.bxData.managerId,
-      'TASKDATA[DEADLINE]': curDate.toISOString(),
-      'TASKDATA[DESCRIPTION]': 'Заявка на включение.\n\nФИО: '+ctx.session.newAbon.fio+'\nконтактные данные: '+ctx.session.newAbon.phone
+      'TASKDATA[CREATED_BY]':     localDb.bxData.managerId
     }
   }
   console.log(reqOp)
+
   request(reqOp, (requestErr, requestRes, requestBody) => {
     //console.log(requestBody)
     let resultJson = JSON.parse(requestBody)

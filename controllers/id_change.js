@@ -12,7 +12,7 @@ const path        = require('path')
 
 
 
-module.exports = function(ctx, localDb, markup) {
+module.exports = function(ctx, localDb, markupOk, markupErr) {
   console.log('\ncontroller hears_id_change -----------------------------------:')
   //console.log(ctx)
 
@@ -44,8 +44,10 @@ module.exports = function(ctx, localDb, markup) {
         fs.writeFile(path.join(__dirname, '../local_db.json'), JSON.stringify(localDb, "", 2), 'utf8', (err) => {
           if (err) throw err;
           console.log('local_db.json has been saved!')
-          ctx.session.value = 'Успешно! ID изменен на <b>'+ctx.message.text+'</b>.'
-          ctx.reply(ctx.session.value, markup)
+          ctx.session.value =
+            'Здравствуй, <b>'+resultJson[0]+'</b>'+
+            '\nID: <b>'+ctx.message.text+'</b>'
+          ctx.reply(ctx.session.value, markupOk)
         })
 
         // Связка telegram_id --- номер договора
@@ -58,14 +60,14 @@ module.exports = function(ctx, localDb, markup) {
       else {
         ctx.reply('Не прошло! CRM отдает не все данные.')
         ctx.session.value = 'Привет \u270B'
-        ctx.reply(ctx.session.value, markup)        
+        ctx.reply(ctx.session.value, markupErr)        
       }
 
     }
     else {
       ctx.reply('Не прошло! Нет такого ID.')
       ctx.session.value = 'Привет \u270B'
-      ctx.reply(ctx.session.value, markup)
+      ctx.reply(ctx.session.value, markupErr)
     }
   })
 

@@ -10,8 +10,8 @@ const bxClientId      = process.argv[7]
 const bxClientSecret  = process.argv[8]
 
 const bxApiUrl        = 'https://srgp.bitrix24.ru'
-const bxEngineerId    = 105
-const bxManagerId     = 119
+const bxEngineerId    = 105   // Артем
+const bxManagerId     = 30    // Катя
 
 console.log('Telegram WebHook path:          https://'+whIp+':'+whPort+'/'+token)
 console.log('kassa.yandex.ru provider_token: '+ykToken)
@@ -168,11 +168,11 @@ const hears_id_new                = 'Ок. Напишите свой <b>ID</b>\n
 const hears_id_change             = 'Ok. Напишите новый <b>ID</b>'
 const hears_invoice_balance_sum   = 'Ok. Напишите сумму пополнения баланса <b>\u20BD</b>'
 const hears_friend_name           = 'Ok. Как зовут друга?'
-const hears_friend_phone          = 'Ok. Напишите телефон Вашего друга'
+const hears_friend_phone          = 'Ok. Напишите как связаться с Вашим другом'
 const hears_pause_from            = 'Ok. Напишите с какой даты приостановить услуги\nФормат <b>ГГГГ-ММ-ДД</b> (например 2018-11-15)'
 const hears_pause_to              = 'Ok. Напишите до какой даты приостановить услуги\nФормат <b>ГГГГ-ММ-ДД</b> (например 2018-11-15)'
 const hears_newAbon_name          = 'Ok. Как Вас зовут?'
-const hears_newAbon_phone         = 'Ok. Напишите как с вами можно связаться'
+const hears_newAbon_phone         = 'Ok. Напишите как с Вами можно связаться'
 
 // markups --------------------------------------------------------------------
 const level_1_markup = Extra
@@ -209,7 +209,7 @@ const level_2_2_markup = Extra
     m.callbackButton(tgTools.fixedFromCharCode(0x1F4DA)+' Тарифы и услуги',       'tarif_info'),
     m.callbackButton(tgTools.fixedFromCharCode(0x1F4CC)+' Заявка на включение',   'new_abon_request'),
     m.callbackButton(tgTools.fixedFromCharCode(0x1F4B8)+' Способы оплаты',        'pay_methods'),
-    m.callbackButton(tgTools.fixedFromCharCode(0x2754) +' Вопросы',               'issues'),
+    m.urlButton     (tgTools.fixedFromCharCode(0x2754) +' Вопросы',               'https://t.me/domonline_rf'),
     m.callbackButton(tgTools.fixedFromCharCode(0x2716) +' Назад',                 'go_start')
   ], {columns: 2}))
 
@@ -326,7 +326,8 @@ callbackRouter.on('new_abon_request', (ctx) => {
 })
 
 callbackRouter.on('issues', (ctx) => {
-  ctx.session.value = 'Вопросы (в разработке)'
+  //ctx.answerCbQuery('Answer to the Ultimate Question of Life, the Universe, and Everything', false, 'https://t.me/ArsTeleBot')
+  ctx.session.value = 'Консультант - @ars_anosov'
   ctx.editMessageText(ctx.session.value, level_2_2_markup).catch(() => undefined)
 })
 
@@ -415,12 +416,12 @@ bot.hears(/.*/, (ctx) => {
 
       // Новый ID
       case hears_id_new:
-        id_change(ctx, localDb, level_1_markup)
+        id_change(ctx, localDb, level_2_1_markup, level_1_markup)
         break
 
       // Смена ID
       case hears_id_change:
-        id_change(ctx, localDb, level_1_markup)
+        id_change(ctx, localDb, level_2_1_markup, level_1_markup)
         break
 
       // Сумма пополнения баланса для invoice
@@ -439,7 +440,7 @@ bot.hears(/.*/, (ctx) => {
         ctx.session.value = hears_friend_phone 
         ctx.reply(ctx.session.value, level_last_markup).catch(() => undefined)
         break
-      // Приведи друга (Телефон)
+      // Приведи друга (контактные данные)
       case hears_friend_phone:
         ctx.session.friend.phone = ctx.message.text
         friends_invite(ctx, level_2_1_markup, localDb)

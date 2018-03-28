@@ -29,28 +29,16 @@ module.exports = function(ctx, markup, localDb) {
   }
   //console.log(freeDays)
 
-  let weekDayName = {
-    0: 'Вс.',
-    1: 'Пн.',
-    2: 'Вт.',
-    3: 'Ср.',
-    4: 'Чт.',
-    5: 'Пт.',
-    6: 'Сб.'
-  }
-  let monthName = {
-    1: 'января',
-    2: 'февраля',
-    3: 'марта',
-    4: 'апреля',
-    5: 'мая',
-    6: 'июня',
-    7: 'июля',
-    8: 'августа',
-    9: 'сентября',
-    10: 'октября',
-    11: 'ноября',
-    12: 'декабря'
+  let dOptions = {
+    //era: 'long',
+    weekday: 'short',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    //timezone: 'UTC',
+    //hour: 'numeric',
+    //minute: 'numeric',
+    //second: 'numeric'
   }
 
   // https://dev.1c-bitrix.ru/rest_help/tasks/task/item/list.php
@@ -63,7 +51,7 @@ module.exports = function(ctx, markup, localDb) {
       'O[DEADLINE]': 'asc',
       'F[RESPONSIBLE_ID]': localDb.bxData.engineerId,
       'F[ONLY_ROOT_TASKS]': 'Y',
-      'F[>DEADLINE]': curDate.getFullYear()+'-'+(curDate.getMonth()+1)+'-'+curDate.getDate(),
+      'F[>DEADLINE]': curDate.toISOString(),
       'P[]': ''
     }
   }
@@ -97,7 +85,7 @@ module.exports = function(ctx, markup, localDb) {
           if (freeDays[key]) {
             let niceDate = new Date(key)
             //console.log(key +' : '+ niceDate)
-            buttonArr.push( m.callbackButton(weekDayName[niceDate.getDay()]+' '+niceDate.getDate()+' '+monthName[(niceDate.getMonth()+1)]+' '+niceDate.getFullYear(), 'engineer_invite:'+'119'+':'+key) )
+            buttonArr.push( m.callbackButton(niceDate.toLocaleString("ru", dOptions), 'engineer_invite:'+localDb.bxData.engineerId+':'+key) )
           }
         }
         buttonArr.push( m.callbackButton(tgTools.fixedFromCharCode(0x2716) +' Назад', 'abonent') )

@@ -41,7 +41,7 @@ module.exports = function(ctx, markup, localDb) {
 //
 //  })
 
-  ctx.session.value = 'Прнинято. Услуги будут приостановлены.'
+  ctx.session.value = '(В разработке)'
   ctx.reply(ctx.session.value, markup).catch(() => undefined)
 
 }
