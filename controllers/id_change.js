@@ -13,7 +13,7 @@ const path        = require('path')
 
 
 module.exports = function(ctx, localDb, markupOk, markupErr) {
-  console.log('\ncontroller hears_id_change -----------------------------------:')
+  console.log('\ncontroller id_change -----------------------------------------:')
   //console.log(ctx)
 
   let reqOp = {  

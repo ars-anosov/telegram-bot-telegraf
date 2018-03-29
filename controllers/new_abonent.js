@@ -17,10 +17,14 @@ module.exports = function(ctx, markup, localDb) {
     method:   'POST',
     formData: {
       'auth': localDb.oauth2.access_token,
-      'TASKDATA[TITLE]':          'ИНТ_Заявка на включение',
+      'TASKDATA[TITLE]':          'CRM: ИНТ '+ctx.session.newAbon.addrDom+'-'+ctx.session.newAbon.addrKv,
       'TASKDATA[DESCRIPTION]':    'Заявка на включение через Telegram'+
 '\nФИО: '+ctx.session.newAbon.fio+
-'\nКонтактные данные: '+ctx.session.newAbon.phone,
+'\nКонтактные данные: '+ctx.session.newAbon.phone+
+'\nНаселенный пункт: '+ctx.session.newAbon.addrNp+
+'\nУлица: '+ctx.session.newAbon.addrStreet+
+'\nДом: '+ctx.session.newAbon.addrDom+
+'\nКвартира: '+ctx.session.newAbon.addrKv,
       'TASKDATA[DEADLINE]':       curDate.toISOString(),
       'TASKDATA[AUDITORS][0]':    localDb.bxData.managerId,
       'TASKDATA[AUDITORS][1]':    12,  // Оксана
@@ -38,10 +42,10 @@ module.exports = function(ctx, markup, localDb) {
 
     if (resultJson.result) {
       console.log(resultJson)
-      
+
       ctx.session.value = 'Заявка на включение #'+resultJson.result+' оформлена.'
       ctx.reply(ctx.session.value).catch(() => undefined)
-      
+
       ctx.session.value = ctx.session.newAbon.fio+', менеджер свяжется с вами в ближайшее время.'
       ctx.reply(ctx.session.value, markup).catch(() => undefined)
     }
@@ -50,7 +54,7 @@ module.exports = function(ctx, markup, localDb) {
       ctx.session.value = 'bitrix24 не ответил'
       ctx.reply(ctx.session.value, markup).catch(() => undefined)
     }
-    
+
   })
 
 }

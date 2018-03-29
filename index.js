@@ -1,20 +1,21 @@
 // arg
 const nodePath        = process.argv[0]
 const appPath         = process.argv[1]
-const token           = process.argv[2]
-const whIp            = process.argv[3]
-const whPort          = process.argv[4]
-const ykToken         = process.argv[5]
-const oauthPort       = process.argv[6]
-const bxClientId      = process.argv[7]
-const bxClientSecret  = process.argv[8]
+const whIp            = process.argv[2]
+const token           = process.argv[3]
+const ykToken         = process.argv[4]
+const bxApiUrl        = process.argv[5]
+const bxClientId      = process.argv[6]
+const bxClientSecret  = process.argv[7]
 
-const bxApiUrl        = 'https://srgp.bitrix24.ru'
+const whPort          = 8443
+const oauthPort       = 8010
 const bxEngineerId    = 105   // Артем
 const bxManagerId     = 30    // Катя
 
 console.log('Telegram WebHook path:          https://'+whIp+':'+whPort+'/'+token)
 console.log('kassa.yandex.ru provider_token: '+ykToken)
+console.log('Bitrix24 API url:               '+bxApiUrl)
 console.log('Bitrix24 OAuth2 path:           http://'+whIp+':'+oauthPort+'/oauth')
 console.log('Bitrix24 client_id:             '+bxClientId)
 console.log('Bitrix24 client_secret:         '+bxClientSecret)
@@ -23,6 +24,7 @@ console.log('---')
 // my modules
 const tgTools         = require('./tools/tg_tools')
 const bxTools         = require('./tools/bx_tools')
+const rrTools         = require('./tools/rr_tools')
 const stateControl    = require('./middleware/stateControl')
 
 const id_change       = require('./controllers/id_change')
@@ -66,8 +68,11 @@ localDb.bxData = {
   'managerId':      bxManagerId
 }
 
-
-
+// Сввзка с проектом replacer-react
+localDb.replacerData = {
+  'addr': {},
+  'sum':  {}
+}
 
 
 
@@ -121,11 +126,19 @@ app2.get('/oauth', function (req, res) {
 app2.listen(oauthPort, () => {
   console.log('express app2 started on http server, port: '+oauthPort)
 
-// Обновляю OAuth2 access_token каждые 10 минут
+  // Обновляю OAuth2 access_token
   bxTools.oauthRefrash(localDb)
+  // Обновляю переменные из проекта replacer-react
+  rrTools.getVars(localDb, 'http://xn--80ahqgegdcb.xn--p1ai/assets/scripts/replacer__addr.js')
+  rrTools.getVars(localDb, 'http://xn--80ahqgegdcb.xn--p1ai/assets/scripts/replacer__sum.js')
+
+  // и далее - каждые 10 минут
   setInterval(() => {
     bxTools.oauthRefrash(localDb)
+    rrTools.getVars(localDb, 'http://xn--80ahqgegdcb.xn--p1ai/assets/scripts/replacer__addr.js')
+    rrTools.getVars(localDb, 'http://xn--80ahqgegdcb.xn--p1ai/assets/scripts/replacer__sum.js')
   }, 600000)
+
 })
 
 
@@ -173,6 +186,8 @@ const hears_pause_from            = 'Ok. Напишите с какой даты
 const hears_pause_to              = 'Ok. Напишите до какой даты приостановить услуги\nФормат <b>ГГГГ-ММ-ДД</b> (например 2018-11-15)'
 const hears_newAbon_name          = 'Ok. Как Вас зовут?'
 const hears_newAbon_phone         = 'Ok. Напишите как с Вами можно связаться'
+const hears_newAbon_dom           = 'Ok. Напишите номер дома'
+const hears_newAbon_kv            = 'Ok. Напишите номер квартиры'
 
 // markups --------------------------------------------------------------------
 const level_1_markup = Extra
@@ -325,6 +340,33 @@ callbackRouter.on('new_abon_request', (ctx) => {
   ctx.reply(ctx.session.value, level_last_markup).catch(() => undefined)
 })
 
+callbackRouter.on('new_abon_addr', (ctx) => {
+  ctx.session.newAbon.addrNp = ctx.state.rou1
+
+  ctx.session.value = 'Выбираем улицу'
+  let tmp_markup = Extra
+  .HTML()
+  .markup( (m) => {
+    let buttonArr = []
+    localDb.replacerData.addr[ctx.session.newAbon.addrNp].map((row, i) => {
+      if (i > 0) {
+        buttonArr.push( m.callbackButton(row, 'new_abon_addr2:'+row) )
+      }
+    })
+    buttonArr.push( m.callbackButton(tgTools.fixedFromCharCode(0x2716) +' Назад', 'not_abonent') )
+    return m.inlineKeyboard(buttonArr, {columns: 1})
+  })
+
+  ctx.reply(ctx.session.value, tmp_markup).catch(() => undefined)
+})
+
+callbackRouter.on('new_abon_addr2', (ctx) => {
+  ctx.session.newAbon.addrStreet = ctx.state.rou1
+
+  ctx.session.value = hears_newAbon_dom
+  ctx.reply(ctx.session.value, level_last_markup).catch(() => undefined)
+})
+
 callbackRouter.on('issues', (ctx) => {
   //ctx.answerCbQuery('Answer to the Ultimate Question of Life, the Universe, and Everything', false, 'https://t.me/ArsTeleBot')
   ctx.session.value = 'Консультант - @ars_anosov'
@@ -431,12 +473,10 @@ bot.hears(/.*/, (ctx) => {
         yk_sendInvoice(ctx, ykToken)
         break
 
-      // Приведи друга (Имя)
+      // Приведи друга (Имя) ----------------------------------
       case hears_friend_name:
         ctx.session.friend = {}
         ctx.session.friend.fio = ctx.message.text
-
-        // go next hears
         ctx.session.value = hears_friend_phone 
         ctx.reply(ctx.session.value, level_last_markup).catch(() => undefined)
         break
@@ -446,12 +486,10 @@ bot.hears(/.*/, (ctx) => {
         friends_invite(ctx, level_2_1_markup, localDb)
         break
 
-      // Приостановаить услуги (from)
+      // Приостановаить услуги (from) --------------------------
       case hears_pause_from:
         ctx.session.pause = {}
         ctx.session.pause.from = ctx.message.text
-
-        // go next hears
         ctx.session.value = hears_pause_to 
         ctx.reply(ctx.session.value, level_last_markup).catch(() => undefined)
         break
@@ -461,18 +499,40 @@ bot.hears(/.*/, (ctx) => {
         tarif_pause(ctx, level_2_1_markup, localDb)
         break
 
-      // Заявка на включение (Имя)
+      // Заявка на включение (Имя) -----------------------------
       case hears_newAbon_name:
         ctx.session.newAbon = {}
         ctx.session.newAbon.fio = ctx.message.text
-
-        // go next hears
         ctx.session.value = hears_newAbon_phone 
         ctx.reply(ctx.session.value, level_last_markup).catch(() => undefined)
         break
       // Заявка на включение (контактные данные)
       case hears_newAbon_phone:
         ctx.session.newAbon.phone = ctx.message.text
+
+        ctx.session.value = 'Выбираем населенный пункт'
+        let tmp_markup = Extra
+        .HTML()
+        .markup( (m) => {
+          let buttonArr = []
+          for (let key in localDb.replacerData.addr) {
+            buttonArr.push( m.callbackButton(key, 'new_abon_addr:'+key) )
+          }
+          buttonArr.push( m.callbackButton(tgTools.fixedFromCharCode(0x2716) +' Назад', 'not_abonent') )
+          return m.inlineKeyboard(buttonArr, {columns: 1})
+        })
+
+        ctx.reply(ctx.session.value, tmp_markup).catch(() => undefined)
+        break
+      // Заявка на включение (дом)
+      case hears_newAbon_dom:
+        ctx.session.newAbon.addrDom = ctx.message.text
+        ctx.session.value = hears_newAbon_kv 
+        ctx.reply(ctx.session.value, level_last_markup).catch(() => undefined)
+        break
+      // Заявка на включение (квартира)
+      case hears_newAbon_kv:
+        ctx.session.newAbon.addrKv = ctx.message.text
         new_abonent(ctx, level_2_2_markup, localDb)
         break
 

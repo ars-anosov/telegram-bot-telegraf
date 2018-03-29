@@ -17,13 +17,15 @@ Telegram bot на базе фреймворка [telegraf](https://github.com/te
 Работал в следующем окружении:
 
 - **telegram-bot-telegraf** - Docker-контейнер NodeJS v.9 для разработки. Деплой утилитой **rsync**.
-- **TOKEN** - токен бота, выдает @BotFather
 - **WEBHOOK_IP** - IP Pruduction машины. Доступна по **HTTPS**, **HTTP**. Умеет **rsync**.
+- **TOKEN** - токен бота, выдает @BotFather
 - **WEBHOOK_PORT** - https порт на Pruduction машине для WebHook от Telegram
 - **PROVIDER_TOKEN** - токен платежной системы, привязанной к боту через @BotFather
-- **BX_OAUTH_PORT** - http порт на Pruduction машине для OAuth2 запросов от Bitrix24
+- **BX_API_URL** - адрес клиентского портала на Bitrix24
 - **BX_CLIENT_ID** - client_id приложения на Bitrix24
 - **BX_CLIENT_SECRET** - client_secret приложения на Bitrix24
+- **8443** - https порт на Pruduction машине для WebHook от Telegram
+- **8010** - http порт на Pruduction машине для OAuth2 запросов от Bitrix24
 
 Разрешенные TCP-порты: 443, 80, 88, 8443 (см. [офф.док.](https://core.telegram.org/bots/api) метод "setWebhook").
 ```
@@ -34,11 +36,11 @@ sudo docker run \
   -v $PWD:/telegram-bot-telegraf \
   -w /telegram-bot-telegraf \
   --publish=8443:8443 \
-  --env="TOKEN=123456789:abcdefABCDEFabcdefABCDEFabcdefABCDE" \
+  --publish=8010:8010 \
   --env="WEBHOOK_IP=89.188.100.200" \
-  --env="WEBHOOK_PORT=8443" \
+  --env="TOKEN=123456789:abcdefABCDEFabcdefABCDEFabcdefABCDE" \
   --env="PROVIDER_TOKEN=123456789:LIVE:1234" \
-  --env="BX_OAUTH_PORT=8010" \
+  --env="BX_API_URL=https://xxx.bitrix24.ru" \
   --env="BX_CLIENT_ID=local.1ab2345678cd90.12345678" \
   --env="BX_CLIENT_SECRET=abcdefABCDEF123abcdefABCDEF123abcdefABCDEF123abcde" \
   -it \
@@ -91,13 +93,13 @@ openssl x509 -req -days 10950 -CA ca.pem -CAkey ca.key -set_serial 01 \
 В контейнере - не забыть сделать port redirect с реального EXTERNAL IP. Запускаем:
 ```
 npm install
-node index.js $TOKEN $WEBHOOK_IP $WEBHOOK_PORT $PROVIDER_TOKEN $BX_OAUTH_PORT $BX_CLIENT_ID $BX_CLIENT_SECRET
+node index.js $WEBHOOK_IP $TOKEN $PROVIDER_TOKEN $BX_API_URL $BX_CLIENT_ID $BX_CLIENT_SECRET
 ```
 
 На production машине:
 ```
 npm install
-node index.js <INSERT_TOKEN> <INSERT_WEBHOOK_IP> <INSERT_WEBHOOK_PORT> <INSERT_PROVIDER_TOKEN> <INSERT_BX_OAUTH_PORT> <INSERT_BX_CLIENT_ID> <INSERT_BX_CLIENT_SECRET>
+node index.js <INSERT_WEBHOOK_IP> <INSERT_TOKEN> <INSERT_PROVIDER_TOKEN> <INSERT_BX_API_URL> <INSERT_BX_CLIENT_ID> <INSERT_BX_CLIENT_SECRET>
 ```
 
 
@@ -126,8 +128,9 @@ gulp deploy
 
 
 ## Всякое
-- [webhooks](https://core.telegram.org/bots/webhooks)
 - [telegram API](https://core.telegram.org/bots/api)
+- [webhooks](https://core.telegram.org/bots/webhooks)
+- [bitrix24 OAuth2](https://dev.1c-bitrix.ru/learning/course/index.php?COURSE_ID=99&LESSON_ID=2486#full_auth)
 
 Состояние бота через браузер на api.telegram.org
 ```
@@ -135,13 +138,18 @@ https://api.telegram.org/bot<INSERT_BOT_TOKEN_HERE>/getMe
 https://api.telegram.org/bot<INSERT_BOT_TOKEN_HERE>/getWebhookInfo
 ```
 
-Пара "ручных" запросов
+Несколько "ручных" запросов
 ```
-# запрос к боту
-curl -v -k https://<INSERT_WEBHOOK_IP_HERE>:<INSERT_WEBHOOK_PORT_HERE>/
-
 # установить webhook
-curl -F "url=https://<INSERT_WEBHOOK_IP_HERE>:<INSERT_WEBHOOK_PORT_HERE>/<INSERT_BOT_TOKEN_HERE>" \
+curl -F "url=https://<INSERT_WEBHOOK_IP_HERE>:8443/<INSERT_BOT_TOKEN_HERE>" \
      -F "certificate=@cert/client.pem" \
      https://api.telegram.org/bot<INSERT_BOT_TOKEN_HERE>/setWebhook
+
+# запрос к боту
+curl -v -k https://<INSERT_WEBHOOK_IP_HERE>:8443/
+```
+
+Пользователь сообщает bitrix24 что он авторизован - в ответ OAuth2
+```
+https://xxx.bitrix24.ru/oauth/authorize/?client_id=<INSERT_BX_CLIENT_ID>
 ```

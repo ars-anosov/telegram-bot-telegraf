@@ -18,6 +18,8 @@ var oauthRes =  function(args, localDb) {
   }
 
   request(reqOp, (requestErr, requestRes, requestBody) => {
+    if (requestErr) throw requestErr
+
     if (requestRes.statusCode === 200) {
       let resultJson = JSON.parse(requestBody)
       localDb.oauth2 = resultJson
@@ -44,6 +46,8 @@ var oauthRefrash =  function(localDb) {
   }
 
   request(reqOp, (requestErr, requestRes, requestBody) => {
+    if (requestErr) throw requestErr
+
     if (requestRes.statusCode === 200) {
       let resultJson = JSON.parse(requestBody)
       localDb.oauth2 = resultJson
