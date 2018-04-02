@@ -6,16 +6,14 @@ const request = require('request')
 
 module.exports = function(ctx, markup, localDb) {
   console.log('\ncontroller engineer_invite -----------------------------------:')
-  // ctx.state.rou1 = ID инженера
-  // ctx.state.rou2 = Дата выезда инженера
+  // ctx.state.rou1 - прилетает от engineer_search - дата
+  // ctx.session.engineerFreeDays - наполняется в engineer_search - загрузка спецов по датам
 
-  ctx.editMessageText('Оформляем заявку на выезд '+ctx.state.rou2+'...', markup).catch(() => undefined)
+  ctx.editMessageText('Оформляем заявку на выезд '+ctx.state.rou1+'...', markup).catch(() => undefined)
 
   // https://dev.1c-bitrix.ru/rest_help/tasks/task/item/add.php
   let curDate = new Date()
   //curDate.setHours(18, 0, 0, 0)
-  let inviteDate = new Date(ctx.state.rou2)
-  inviteDate.setHours(10, 0, 0, 0)
 
   let dOptions = {
     //era: 'long',
@@ -37,7 +35,7 @@ module.exports = function(ctx, markup, localDb) {
       'TASKDATA[TITLE]':          'ИНТ_Вызов специалиста '+ctx.state.role.do.id.substring(0,3)+'-'+ctx.state.role.do.id.substring(3,6),
       'TASKDATA[DESCRIPTION]':    'Абонент '+ctx.state.role.do.fio+', номер договора '+ctx.state.role.do.id+', телефон '+ctx.state.role.do.phone+
 '\n\nВызов специалиста через Telegram'+
-'\nОжидает специалиста: '+inviteDate.toLocaleString("ru", dOptions)+
+'\nОжидает специалиста: '+ctx.state.rou1+
 '\nДом: '+ctx.state.role.do.id.substring(0,3)+'\nКвартира: '+ctx.state.role.do.id.substring(3,6),
       'TASKDATA[DEADLINE]':       curDate.toISOString(),
       'TASKDATA[AUDITORS][0]':    localDb.bxData.managerId,
@@ -48,6 +46,12 @@ module.exports = function(ctx, markup, localDb) {
       'TASKDATA[CREATED_BY]':     localDb.bxData.managerId
     }
   }
+  reqOp.formData['TASKDATA[DESCRIPTION]'] += '\n\nВ этот день на специалистах так же висят задачи:'
+  for (let engineerId in ctx.session.engineerFreeDays[ctx.state.rou1]) {
+    ctx.session.engineerFreeDays[ctx.state.rou1][engineerId].map((row) => {
+      reqOp.formData['TASKDATA[DESCRIPTION]'] += '\n'+row
+    })
+  }
   console.log(reqOp)
 
   request(reqOp, (requestErr, requestRes, requestBody) => {
@@ -57,7 +61,7 @@ module.exports = function(ctx, markup, localDb) {
     if (resultJson.result) {
       console.log(resultJson)
 
-      ctx.session.value = 'Вызов специалиста на '+inviteDate.toLocaleString("ru", dOptions)+'\nЗаявка #'+resultJson.result+' оформлена.\n\nЖдите звонка, специалист согласует время приезда.'
+      ctx.session.value = 'Вызов специалиста на '+ctx.state.rou1+'\nЗаявка #'+resultJson.result+' оформлена.\n\nЖдите звонка, специалист согласует время приезда.'
       ctx.reply(ctx.session.value).catch(() => undefined)
 
       ctx.session.value = 'Специалист вызван.'

@@ -55,10 +55,13 @@ module.exports = function(ctx, localDb, markupOk, markupErr) {
         request(reqOp, (requestErr, requestRes, requestBody) => {
           console.log('SRGP_API_UPD_TEL_ID')
           console.log(requestBody)
+          if (requestBody !== 'Telegram ID was updated') {
+            ctx.reply('Проблема! SRGP_API_UPD_TEL_ID - платежная система не привязалась к CRM.', markupOk)
+          }
         })
       }
       else {
-        ctx.reply('Не прошло! CRM отдает не все данные.')
+        ctx.reply('Не прошло! SRGP_API_DOG_INFO - нет данных от CRM.')
         ctx.session.value = 'Привет \u270B'
         ctx.reply(ctx.session.value, markupErr)        
       }

@@ -30,16 +30,19 @@ module.exports = function(ctx, localDb, tarifType, markup) {
   //console.log(reqOp)
   request(reqOp, (requestErr, requestRes, requestBody) => {
     console.log(requestBody)
+
     if (requestBody === 'Tarif was updated') {
       localDb[ctx.from.id].do.tarif = tarifName[tarifType]
-
       fs.writeFile(path.join(__dirname, '../local_db.json'), JSON.stringify(localDb, "", 2), 'utf8', (err) => {
         if (err) throw err;
         console.log('local_db.json has been saved!')
         ctx.session.value = 'Успешно! Тариф изменен на <b>'+tarifName[tarifType]+'</b>.'
         ctx.editMessageText(ctx.session.value, markup)
       })
-
+    }
+    else {
+      ctx.session.value = 'Не прошло! SRGP_API_UPD_TARIF_TYPE - тарив не обновился в CRM.'
+      ctx.editMessageText(ctx.session.value, markup).catch(() => undefined)
     }
 
   })

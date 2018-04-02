@@ -8,10 +8,11 @@ const bxApiUrl        = process.argv[5]
 const bxClientId      = process.argv[6]
 const bxClientSecret  = process.argv[7]
 
+// specific params
 const whPort          = 8443
 const oauthPort       = 8010
-const bxEngineerId    = 105   // Артем
-const bxManagerId     = 30    // Катя
+const bxEngineerId    = [105, 115]    // Артем, Владислав
+const bxManagerId     = 30            // Катя
 
 console.log('Telegram WebHook path:          https://'+whIp+':'+whPort+'/'+token)
 console.log('kassa.yandex.ru provider_token: '+ykToken)
@@ -332,7 +333,7 @@ callbackRouter.on('yk_startInvoice', (ctx) => {
 
 // level_2_2 ----------------------------------------------
 callbackRouter.on('tarif_info', (ctx) => {
-  tarif_info(ctx, level_2_2_markup)
+  tarif_info(ctx, level_2_2_markup, localDb)
 })
 
 callbackRouter.on('new_abon_request', (ctx) => {

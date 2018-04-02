@@ -15,20 +15,6 @@ module.exports = function(ctx, markup, localDb) {
 
   ctx.editMessageText('Поиск свободного инженера...', markup).catch(() => undefined)
 
-  let curDate = new Date()
-
-  // Готовлю массив доступных дней для выезда специалиста
-  let freeDays = {}
-  for (let i = 0; i < 7; i += 1) {
-    // Начинаем поиск со следующего дня
-    curDate.setDate(curDate.getDate()+1)
-    // от 0(воскресенье) до 6(суббота)
-    if (curDate.getDay() !== 6 && curDate.getDay() !== 0) {
-      freeDays[curDate.getFullYear()+'-'+(curDate.getMonth()+1)+'-'+curDate.getDate()] = true
-    }
-  }
-  //console.log(freeDays)
-
   let dOptions = {
     //era: 'long',
     weekday: 'short',
@@ -41,6 +27,37 @@ module.exports = function(ctx, markup, localDb) {
     //second: 'numeric'
   }
 
+  let dOptions2 = {
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric'
+  }
+
+
+
+
+  // Готовлю массив доступных дней для выезда специалиста ---------------------
+  let curDate = new Date()
+  let freeDays = {}
+  for (let i = 0; i < 7; i += 1) {
+    // Начинаем поиск с текущего дня
+    // от 0(воскресенье) до 6(суббота)
+    if (curDate.getDay() !== 0) {
+      freeDays[ curDate.toLocaleString("ru", dOptions) ] = {}
+      // Для каждого специалиста число заявок = пустой массив
+      localDb.bxData.engineerId.map((row) => {
+        freeDays[ curDate.toLocaleString("ru", dOptions) ][ row ] = []
+      })
+    }
+    curDate.setDate(curDate.getDate()+1)
+  }
+  //console.log(freeDays)
+
+
+
+  // Запрашиваю текущие заявки по специалистам localDb.bxData.engineerId ------
   // https://dev.1c-bitrix.ru/rest_help/tasks/task/item/list.php
   curDate = new Date()
   let reqOp = {
@@ -49,12 +66,14 @@ module.exports = function(ctx, markup, localDb) {
     formData: {
       'auth': localDb.oauth2.access_token,
       'O[DEADLINE]': 'asc',
-      'F[RESPONSIBLE_ID]': localDb.bxData.engineerId,
       'F[ONLY_ROOT_TASKS]': 'Y',
-      'F[>DEADLINE]': curDate.toISOString(),
-      'P[]': ''
+      'F[>DEADLINE]': curDate.toISOString()
     }
   }
+  localDb.bxData.engineerId.map((row, i) => {
+    reqOp.formData['F[RESPONSIBLE_ID]['+i+']'] = row
+  })
+
   console.log(reqOp)
   request(reqOp, (requestErr, requestRes, requestBody) => {
     //console.log(requestBody)
@@ -62,30 +81,35 @@ module.exports = function(ctx, markup, localDb) {
 
     if (resultJson.result) {
       //console.log(resultJson)
-      ctx.session.value = ''
-      resultJson.result.map( (row, i) => {
-        console.log(row.TITLE+' - '+row.CREATED_DATE.substring(0, 10)+' - '+row.DEADLINE.substring(0, 10))
-        let deadlineDate = new Date(row.DEADLINE)
-        let deadlineStr = deadlineDate.getFullYear()+'-'+(deadlineDate.getMonth()+1)+'-'+deadlineDate.getDate()
 
-        // Если дедлайн попал в подготовленный массив freeDays, вычеркиваю этот день (false)
-        if (freeDays[deadlineStr]) {
-          freeDays[deadlineStr] = false
+      resultJson.result.map( (row, i) => {
+        let createdDate   = new Date(row.CREATED_DATE)
+        let deadlineDate  = new Date(row.DEADLINE)
+
+        // Если дедлайн попал в подготовленный массив freeDays, наполняю массив
+        if ( freeDays[ deadlineDate.toLocaleString("ru", dOptions) ] ) {
+          freeDays[ deadlineDate.toLocaleString("ru", dOptions) ][ row.RESPONSIBLE_ID ].push( row.RESPONSIBLE_NAME+' '+row.RESPONSIBLE_LAST_NAME+' '+deadlineDate.toLocaleString("ru", dOptions2)+': '+row.TITLE )
         }
 
       })
+      console.log(freeDays)
+      ctx.session.engineerFreeDays = freeDays
 
-      //ctx.session.value = JSON.stringify(freeDays, "", 2)
+      // Выдаю на дни, где за специалистом меньше 4-х заявок
       ctx.session.value = 'Выбирайте дату приезда специалиста'
       markup = Extra
       .HTML()
       .markup( (m) => {
         let buttonArr = []
-        for (let key in freeDays) {
-          if (freeDays[key]) {
-            let niceDate = new Date(key)
-            //console.log(key +' : '+ niceDate)
-            buttonArr.push( m.callbackButton(niceDate.toLocaleString("ru", dOptions), 'engineer_invite:'+localDb.bxData.engineerId+':'+key) )
+        // Дни
+        for (let bttnDate in freeDays) {
+          // Спецы
+          for (let engineerId in freeDays[bttnDate]) {
+            // Количество заявок
+            if (freeDays[bttnDate][engineerId].length < 4) {
+              buttonArr.push( m.callbackButton(bttnDate, 'engineer_invite:'+bttnDate) )
+              break
+            }
           }
         }
         buttonArr.push( m.callbackButton(tgTools.fixedFromCharCode(0x2716) +' Назад', 'abonent') )
