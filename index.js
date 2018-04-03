@@ -7,6 +7,8 @@ const ykToken         = process.argv[4]
 const bxApiUrl        = process.argv[5]
 const bxClientId      = process.argv[6]
 const bxClientSecret  = process.argv[7]
+const smtpUser        = process.argv[8]
+const smtpPass        = process.argv[9]
 
 // specific params
 const whPort          = 8443
@@ -20,6 +22,8 @@ console.log('Bitrix24 API url:               '+bxApiUrl)
 console.log('Bitrix24 OAuth2 path:           http://'+whIp+':'+oauthPort+'/oauth')
 console.log('Bitrix24 client_id:             '+bxClientId)
 console.log('Bitrix24 client_secret:         '+bxClientSecret)
+console.log('smtp.mail.ru user:              '+smtpUser)
+console.log('smtp.mail.ru password:          '+smtpPass)
 console.log('---')
 
 // my modules
@@ -61,6 +65,7 @@ const bot         = new Telegraf(token)
 
 // localDb
 var localDb = JSON.parse( fs.readFileSync( path.join(__dirname, 'local_db.json') ) )
+// bitrix24
 localDb.bxData = {
   'clientId':       bxClientId,
   'clientSecret':   bxClientSecret,
@@ -68,7 +73,11 @@ localDb.bxData = {
   'engineerId':     bxEngineerId,
   'managerId':      bxManagerId
 }
-
+// smtp.mail.ru
+localDb.smtpData = {
+  'user': smtpUser,
+  'pass': smtpPass
+}
 // Сввзка с проектом replacer-react
 localDb.replacerData = {
   'addr': {},

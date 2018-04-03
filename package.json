@@ -6,6 +6,7 @@
   "dependencies": {
     "express": "^4.16.2",
     "iconv-lite": "^0.4.19",
+    "nodemailer": "^4.6.4",
     "request": "^2.83.0",
     "telegraf": "^3.18.0"
   },

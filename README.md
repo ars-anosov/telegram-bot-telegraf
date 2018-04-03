@@ -24,6 +24,8 @@ Telegram bot на базе фреймворка [telegraf](https://github.com/te
 - **BX_API_URL** - адрес клиентского портала на Bitrix24
 - **BX_CLIENT_ID** - client_id приложения на Bitrix24
 - **BX_CLIENT_SECRET** - client_secret приложения на Bitrix24
+- **SMTP_USER** - почтовый адрес для рассылок через mail.ru
+- **SMTP_PASS** - пароль mail.ru
 - **8443** - https порт на Pruduction машине для WebHook от Telegram
 - **8010** - http порт на Pruduction машине для OAuth2 запросов от Bitrix24
 
@@ -43,6 +45,8 @@ sudo docker run \
   --env="BX_API_URL=https://xxx.bitrix24.ru" \
   --env="BX_CLIENT_ID=local.1ab2345678cd90.12345678" \
   --env="BX_CLIENT_SECRET=abcdefABCDEF123abcdefABCDEF123abcdefABCDEF123abcde" \
+  --env="SMTP_USER=telegram@xxx.ru" \
+  --env="SMTP_PASS=yyy" \
   -it \
   node:9 bash
 ```
@@ -90,16 +94,20 @@ openssl x509 -req -days 10950 -CA ca.pem -CAkey ca.key -set_serial 01 \
 
 ## Запуск бота
 
-В контейнере - не забыть сделать port redirect с реального EXTERNAL IP. Запускаем:
+В контейнере - не забыть сделать port redirect 8443 и 8010 с реального EXTERNAL IP. Запускаем:
 ```
 npm install
-node index.js $WEBHOOK_IP $TOKEN $PROVIDER_TOKEN $BX_API_URL $BX_CLIENT_ID $BX_CLIENT_SECRET
+node index.js $WEBHOOK_IP $TOKEN $PROVIDER_TOKEN \
+              $BX_API_URL $BX_CLIENT_ID $BX_CLIENT_SECRET \
+              $SMTP_USER $SMTP_PASS
 ```
 
 На production машине:
 ```
 npm install
-node index.js <INSERT_WEBHOOK_IP> <INSERT_TOKEN> <INSERT_PROVIDER_TOKEN> <INSERT_BX_API_URL> <INSERT_BX_CLIENT_ID> <INSERT_BX_CLIENT_SECRET>
+node index.js <INSERT_WEBHOOK_IP> <INSERT_TOKEN> <INSERT_PROVIDER_TOKEN> \
+              <INSERT_BX_API_URL> <INSERT_BX_CLIENT_ID> <INSERT_BX_CLIENT_SECRET> \
+              <INSERT_SMTP_USER> <INSERT_SMTP_PASS>
 ```
 
 
