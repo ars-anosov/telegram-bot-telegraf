@@ -192,8 +192,8 @@ const hears_id_change             = 'Ok. Напишите новый <b>ID</b>'
 const hears_invoice_balance_sum   = 'Ok. Напишите сумму пополнения баланса <b>\u20BD</b>'
 const hears_friend_name           = 'Ok. Как зовут друга?'
 const hears_friend_phone          = 'Ok. Напишите как связаться с Вашим другом'
-const hears_pause_from            = 'Ok. Напишите с какой даты приостановить услуги\nФормат <b>ГГГГ-ММ-ДД</b> (например 2018-11-15)'
-const hears_pause_to              = 'Ok. Напишите до какой даты приостановить услуги\nФормат <b>ГГГГ-ММ-ДД</b> (например 2018-11-15)'
+const hears_pause_from            = 'Ok. Напишите <b>с</b> какой даты приостановить услуги'
+const hears_pause_to              = 'Ok. Напишите <b>до</b> какой даты приостановить услуги'
 const hears_newAbon_name          = 'Ok. Как Вас зовут?'
 const hears_newAbon_phone         = 'Ok. Напишите как с Вами можно связаться'
 const hears_newAbon_dom           = 'Ok. Напишите номер дома'
@@ -314,6 +314,7 @@ callbackRouter.on('tarif_change_limited', (ctx) => {
 })
 
 callbackRouter.on('tarif_pause', (ctx) => {
+  ctx.reply('Пишем дату в формате <b>ДД-ММ-ГГГГ</b> (например 15-11-2018)', Extra.HTML()).catch(() => undefined)
   ctx.session.value = hears_pause_from
   ctx.reply(ctx.session.value, level_last_markup).catch(() => undefined)
 })

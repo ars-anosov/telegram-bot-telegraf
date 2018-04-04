@@ -28,6 +28,9 @@ module.exports = function(ctx, markup) {
         'Тариф: <b>'+ctx.state.role.do.tarif+'</b>'+
         '\nБаланс: <b>'+resultJson[0]+' \u20BD</b>'+
         '\nОплачено дней: <b>'+resultJson[1]+'</b>'
+      if (ctx.state.role.do.tarif_pause) {
+        ctx.session.value += '\nПриостановка: <b>'+ctx.state.role.do.tarif_pause+'</b>'
+      }
       console.log(ctx.session.value)
       ctx.editMessageText(ctx.session.value, markup).catch(() => undefined)
     }
