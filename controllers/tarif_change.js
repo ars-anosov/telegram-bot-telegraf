@@ -10,9 +10,6 @@ const tarifName = {
 const fs          = require('fs')
 const path        = require('path')
 
-//var iconv = require('iconv-lite')
-//iconv.skipDecodeWarning = true
-
 
 
 

@@ -7,9 +7,6 @@ const request = require('request')
 const fs          = require('fs')
 const path        = require('path')
 
-//var iconv = require('iconv-lite')
-//iconv.skipDecodeWarning = true
-
 
 
 module.exports = function(ctx, localDb, markupOk, markupErr) {

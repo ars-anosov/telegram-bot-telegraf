@@ -1,12 +1,7 @@
 'use strict';
 
 const request = require('request')
-
-//var iconv = require('iconv-lite')
-//iconv.skipDecodeWarning = true
-
 const Extra = require('telegraf/extra')
-const tgTools         = require('../tools/tg_tools')
 
 
 
@@ -112,7 +107,7 @@ module.exports = function(ctx, markup, localDb) {
             }
           }
         }
-        buttonArr.push( m.callbackButton(tgTools.fixedFromCharCode(0x2716) +' Назад', 'abonent') )
+        buttonArr.push( m.callbackButton('\u2716 Назад', 'abonent') )
         return m.inlineKeyboard(buttonArr, {columns: 1})
       })
 

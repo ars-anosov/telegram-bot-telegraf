@@ -27,7 +27,7 @@ console.log('smtp.mail.ru password:          '+smtpPass)
 console.log('---')
 
 // my modules
-const tgTools         = require('./tools/tg_tools')
+//const tgTools         = require('./tools/tg_tools')
 const bxTools         = require('./tools/bx_tools')
 const rrTools         = require('./tools/rr_tools')
 const stateControl    = require('./middleware/stateControl')
@@ -49,6 +49,9 @@ const pay_methods     = require('./controllers/pay_methods')
 // fs
 const fs          = require('fs')
 const path        = require('path')
+
+const util        = require('util')
+
 
 // https
 const https       = require('https')
@@ -210,14 +213,14 @@ const level_1_markup = Extra
 const level_2_1_markup = Extra
   .HTML()
   .markup((m) => m.inlineKeyboard([
-    m.callbackButton(tgTools.fixedFromCharCode(0x1F4BC)+' Проверить баланс',      'balance_check'),
-    m.callbackButton(tgTools.fixedFromCharCode(0x1F4B3)+' Пополнить баланс',      'yk_startInvoice'),
-    m.callbackButton(tgTools.fixedFromCharCode(0x1F4DA)+' Сменить тариф',         'tarif_change'),
-    m.callbackButton(tgTools.fixedFromCharCode(0x1F334)+' Приостановить услуги',  'tarif_pause'),
-    m.callbackButton(tgTools.fixedFromCharCode(0x1F46B)+' Приведи друга',         'friends_invite'),
-    m.callbackButton(tgTools.fixedFromCharCode(0x1F697)+' Вызов специалиста',     'engineer_search'), // внутри route = engineer_invite
-    m.callbackButton(tgTools.fixedFromCharCode(0x26F3) +' У меня другой ID',      'id_change'),
-    m.callbackButton(tgTools.fixedFromCharCode(0x2716) +' Назад',                 'go_start')
+    m.callbackButton('\u{1F4BC} Проверить баланс',      'balance_check'),
+    m.callbackButton('\u{1F4B3} Пополнить баланс',      'yk_startInvoice'),
+    m.callbackButton('\u{1F4DA} Сменить тариф',         'tarif_change'),
+    m.callbackButton('\u{1F334} Приостановить услуги',  'tarif_pause'),
+    m.callbackButton('\u{1F46B} Приведи друга',         'friends_invite'),
+    m.callbackButton('\u{1F697} Вызов специалиста',     'engineer_search'), // внутри route = engineer_invite
+    m.callbackButton('\u26F3 У меня другой ID',         'id_change'),
+    m.callbackButton('\u2716 Назад',                    'go_start')
   ], {columns: 2}))
 
 const level_2_1_tarif_markup = Extra
@@ -225,23 +228,23 @@ const level_2_1_tarif_markup = Extra
   .markup((m) => m.inlineKeyboard([
     m.callbackButton('Без ограничений', 'tarif_change_nolimits'),
     m.callbackButton('Ограниченный',    'tarif_change_limited'),
-    m.callbackButton(tgTools.fixedFromCharCode(0x2716) +' Назад',                 'abonent')
+    m.callbackButton('\u2716 Назад',    'abonent')
   ], {columns: 2}))
 
 const level_2_2_markup = Extra
   .HTML()
   .markup((m) => m.inlineKeyboard([
-    m.callbackButton(tgTools.fixedFromCharCode(0x1F4DA)+' Тарифы и услуги',       'tarif_info'),
-    m.callbackButton(tgTools.fixedFromCharCode(0x1F4CC)+' Заявка на включение',   'new_abon_request'),
-    m.callbackButton(tgTools.fixedFromCharCode(0x1F4B8)+' Способы оплаты',        'pay_methods'),
-    m.urlButton     (tgTools.fixedFromCharCode(0x2754) +' Вопросы',               'https://t.me/domonline_rf'),
-    m.callbackButton(tgTools.fixedFromCharCode(0x2716) +' Назад',                 'go_start')
+    m.callbackButton('\u{1F4DA} Тарифы и услуги',       'tarif_info'),
+    m.callbackButton('\u{1F4CC} Заявка на включение',   'new_abon_request'),
+    m.callbackButton('\u{1F4B8} Способы оплаты',        'pay_methods'),
+    m.urlButton     ('\u2754 Вопросы',                  'https://t.me/domonline_rf'),
+    m.callbackButton('\u2716 Назад',                    'go_start')
   ], {columns: 2}))
 
 const level_last_markup = Extra
   .HTML()
   .markup((m) => m.inlineKeyboard([
-    m.callbackButton(tgTools.fixedFromCharCode(0x2716)+' Назад', 'go_start')
+    m.callbackButton('\u2716 Назад',    'go_start')
   ], {columns: 1}))
 
 
@@ -314,7 +317,11 @@ callbackRouter.on('tarif_change_limited', (ctx) => {
 })
 
 callbackRouter.on('tarif_pause', (ctx) => {
-  ctx.reply('Пишем дату в формате <b>ДД-ММ-ГГГГ</b> (например 15-11-2018)', Extra.HTML()).catch(() => undefined)
+  let minDate = new Date()
+  minDate.setDate(minDate.getDate()+1)
+  let minDateStr = util.format('%s-%s-%s', minDate.getDate() < 10 ? '0'+minDate.getDate() : minDate.getDate(), minDate.getMonth() < 9 ? '0'+(minDate.getMonth()+1) : minDate.getMonth()+1, minDate.getFullYear())
+  ctx.reply('Пишем дату в формате <b>ДД-ММ-ГГГГ</b>\nСамое раннее завтра <b>'+minDateStr+'</b>', Extra.HTML()).catch(() => undefined)
+  
   ctx.session.value = hears_pause_from
   ctx.reply(ctx.session.value, level_last_markup).catch(() => undefined)
 })
@@ -364,7 +371,7 @@ callbackRouter.on('new_abon_addr', (ctx) => {
         buttonArr.push( m.callbackButton(row, 'new_abon_addr2:'+row) )
       }
     })
-    buttonArr.push( m.callbackButton(tgTools.fixedFromCharCode(0x2716) +' Назад', 'not_abonent') )
+    buttonArr.push( m.callbackButton('\u2716 Назад', 'not_abonent') )
     return m.inlineKeyboard(buttonArr, {columns: 1})
   })
 
@@ -479,9 +486,15 @@ bot.hears(/.*/, (ctx) => {
 
       // Сумма пополнения баланса для invoice
       case hears_invoice_balance_sum:
-        ctx.session.invoice = {}
-        ctx.session.invoice.abon = ctx.message.text
-        yk_sendInvoice(ctx, ykToken)
+        if (parseInt(ctx.message.text) >= 100) {
+          ctx.session.invoice = {}
+          ctx.session.invoice.abon = ctx.message.text
+          yk_sendInvoice(ctx, ykToken)
+        }
+        else {
+          ctx.session.value = 'Не прошло! Минимальная сумма 100 ₽'
+          ctx.reply(ctx.session.value, level_2_1_markup).catch(() => undefined)
+        }
         break
 
       // Приведи друга (Имя) ----------------------------------
@@ -499,10 +512,20 @@ bot.hears(/.*/, (ctx) => {
 
       // Приостановаить услуги (from) --------------------------
       case hears_pause_from:
-        ctx.session.pause = {}
-        ctx.session.pause.from = ctx.message.text
-        ctx.session.value = hears_pause_to 
-        ctx.reply(ctx.session.value, level_last_markup).catch(() => undefined)
+        let minDate = new Date()
+        minDate.setDate(minDate.getDate()+1)
+        let fromList = ctx.message.text.split('-')
+        let userInputDate = new Date(fromList[2]+'-'+fromList[1]+'-'+fromList[0]+' 23:59:59')
+        if (userInputDate >= minDate && ctx.message.text.match( /^\d\d\-\d\d\-\d\d\d\d$/i )) {
+          ctx.session.pause = {}
+          ctx.session.pause.from = ctx.message.text
+          ctx.session.value = hears_pause_to 
+          ctx.reply(ctx.session.value, level_last_markup).catch(() => undefined)
+        }
+        else {
+          ctx.session.value = 'Неверная дата' 
+          ctx.reply(ctx.session.value, level_2_1_markup).catch(() => undefined)          
+        }
         break
       // Приостановаить услуги (to)
       case hears_pause_to:
@@ -529,7 +552,7 @@ bot.hears(/.*/, (ctx) => {
           for (let key in localDb.replacerData.addr) {
             buttonArr.push( m.callbackButton(key, 'new_abon_addr:'+key) )
           }
-          buttonArr.push( m.callbackButton(tgTools.fixedFromCharCode(0x2716) +' Назад', 'not_abonent') )
+          buttonArr.push( m.callbackButton('\u2716 Назад', 'not_abonent') )
           return m.inlineKeyboard(buttonArr, {columns: 1})
         })
 

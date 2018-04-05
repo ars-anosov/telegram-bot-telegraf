@@ -15,17 +15,6 @@ module.exports = function(ctx, markup, localDb) {
   let curDate = new Date()
   //curDate.setHours(18, 0, 0, 0)
 
-  let dOptions = {
-    //era: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    //weekday: 'long',
-    //timezone: 'UTC',
-    //hour: 'numeric',
-    //minute: 'numeric',
-    //second: 'numeric'
-  }
 
   let reqOp = {
     url:      localDb.bxData.apiUrl+'/rest/task.item.add.json',
