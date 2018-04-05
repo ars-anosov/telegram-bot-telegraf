@@ -13,6 +13,8 @@ module.exports = function(ctx, localDb, markupOk, markupErr) {
   console.log('\ncontroller id_change -----------------------------------------:')
   //console.log(ctx)
 
+  ctx.reply('Проверяю ID '+ctx.message.text)
+
   let reqOp = {  
     url:      'http://89.188.160.0:32180',
     method:   'POST'
@@ -27,14 +29,25 @@ module.exports = function(ctx, localDb, markupOk, markupErr) {
       if (resultJson[0] && resultJson[1] && resultJson[2] && resultJson[3] && resultJson[4]) {
         localDb[ctx.from.id] = ctx.from
         localDb[ctx.from.id].chat = ctx.message.chat
+
         localDb[ctx.from.id].do = {
-          id:       ctx.message.text,
-          //fio:      iconv.decode(resultJson[0], 'cp1251'),
-          fio:      resultJson[0],
-          phone:    resultJson[1],
-          email:    resultJson[2],
-          balance:  resultJson[3],
-          tarif:    resultJson[4],
+          id:           ctx.message.text,
+          //fio:        iconv.decode(resultJson[0], 'cp1251'),
+          fio:          resultJson[0],
+          phone:        resultJson[1],
+          email:        resultJson[2],
+          balance:      resultJson[3],
+          tarif:        resultJson[4],
+          tarif_pause:  ''
+        }
+
+        // 0 = включен
+        // 3 = выключен
+        // 1 = расторгнут
+        // 4 = на стопе
+        // 5 = профилактика
+        if (resultJson[5] > 0) {
+          localDb[ctx.from.id].do.tarif_pause = resultJson[6]+' - '+resultJson[7]
         }
 
         // Update локальной базы
@@ -70,7 +83,5 @@ module.exports = function(ctx, localDb, markupOk, markupErr) {
       ctx.reply(ctx.session.value, markupErr)
     }
   })
-
-  ctx.reply('Проверяю ID '+ctx.message.text)
 
 }
