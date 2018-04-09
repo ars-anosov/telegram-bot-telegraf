@@ -22,7 +22,16 @@ module.exports = function(ctx, markup) {
 
   reqOp.form = {request_type: 'SRGP_API_DOG_BALANCE', dog_id: ctx.state.role.do.id}
   request(reqOp, (requestErr, requestRes, requestBody) => {
-    let resultJson = JSON.parse(requestBody)
+    let resultJson = []
+
+    try {
+      resultJson = JSON.parse(requestBody)
+    }
+    catch(e) {
+      console.log(requestBody)
+      console.log(e)
+    }
+
     if (resultJson.length > 1) {
       ctx.session.value =
         'Тариф: <b>'+ctx.state.role.do.tarif+'</b>'+

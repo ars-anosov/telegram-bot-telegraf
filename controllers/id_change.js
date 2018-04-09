@@ -23,7 +23,17 @@ module.exports = function(ctx, localDb, markupOk, markupErr) {
   reqOp.form = {request_type: 'SRGP_API_DOG_INFO', dog_id: ctx.message.text}
   request(reqOp, (requestErr, requestRes, requestBody) => {
     console.log('SRGP_API_DOG_INFO')
-    let resultJson = JSON.parse(requestBody)
+    let resultJson = []
+
+    try {
+      resultJson = JSON.parse(requestBody)
+    }
+    catch(e) {
+      ctx.reply('Не прошло! SRGP_API_DOG_INFO - нет данных от CRM.')
+      console.log(requestBody)
+      console.log(e)
+    }
+
     console.log(resultJson)
     if (resultJson.length > 1) {
       if (resultJson[0] && resultJson[1] && resultJson[2] && resultJson[3] && resultJson[4]) {
