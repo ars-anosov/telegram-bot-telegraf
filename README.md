@@ -26,6 +26,7 @@ Telegram bot на базе фреймворка [telegraf](https://github.com/te
 - **BX_CLIENT_SECRET** - client_secret приложения на Bitrix24
 - **SMTP_USER** - почтовый адрес для рассылок через mail.ru
 - **SMTP_PASS** - пароль mail.ru
+- **DB_URL** - по этому URL выдает список Telegram подписчиков
 - **8443** - https порт на Pruduction машине для WebHook от Telegram
 - **8010** - http порт на Pruduction машине для OAuth2 запросов от Bitrix24
 
@@ -47,6 +48,7 @@ sudo docker run \
   --env="BX_CLIENT_SECRET=abcdefABCDEF123abcdefABCDEF123abcdefABCDEF123abcde" \
   --env="SMTP_USER=telegram@xxx.ru" \
   --env="SMTP_PASS=yyy" \
+  --env="DB_URL=secret_path" \
   -it \
   node:9 bash
 ```

@@ -40,8 +40,11 @@ module.exports = function(ctx, markup) {
       if (ctx.state.role.do.tarif_pause) {
         ctx.session.value += '\nПриостановка: <b>'+ctx.state.role.do.tarif_pause+'</b>'
       }
-      console.log(ctx.session.value)
-      ctx.editMessageText(ctx.session.value, markup).catch(() => undefined)
+
+      setTimeout(() => {
+        console.log(ctx.session.value)
+        ctx.editMessageText(ctx.session.value, markup).catch(() => undefined)
+      }, 1000)
     }
     else {
       ctx.session.value = 'Не прошло! SRGP_API_DOG_BALANCE - нет данных от CRM.'

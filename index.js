@@ -9,6 +9,7 @@ const bxClientId      = process.argv[6]
 const bxClientSecret  = process.argv[7]
 const smtpUser        = process.argv[8]
 const smtpPass        = process.argv[9]
+const dbUrl           = process.argv[10]
 
 // specific params
 const whPort          = 8443
@@ -24,6 +25,7 @@ console.log('Bitrix24 client_id:             '+bxClientId)
 console.log('Bitrix24 client_secret:         '+bxClientSecret)
 console.log('smtp.mail.ru user:              '+smtpUser)
 console.log('smtp.mail.ru password:          '+smtpPass)
+console.log('localDb path:                   http://'+whIp+':'+oauthPort+'/'+dbUrl)
 console.log('---')
 
 // my modules
@@ -136,6 +138,15 @@ app2.get('/oauth', function (req, res) {
   bxTools.oauthRes(req.query, localDb)
   res.send('OAuth2 data accepted.')
 })
+// База абонентов для админки
+app2.get('/'+dbUrl, function (req, res) {
+  let resArr = []
+  for (let key in localDb) {
+    if (key.match(/^\d+$/)) { resArr.push(localDb[key]) }
+  }
+  res.send(JSON.stringify(resArr, "", 2))
+})
+// http
 app2.listen(oauthPort, () => {
   console.log('express app2 started on http server, port: '+oauthPort)
 
@@ -221,7 +232,7 @@ const level_2_1_markup = Extra
     m.callbackButton('\u{1F697} Вызов специалиста',     'engineer_search'), // внутри route = engineer_invite
     m.callbackButton('\u26F3 У меня другой ID',         'id_change'),
     m.callbackButton('\u2716 Назад',                    'go_start')
-  ], {columns: 2}))
+  ], {columns: 1}))
 
 const level_2_1_tarif_markup = Extra
   .HTML()
@@ -239,7 +250,7 @@ const level_2_2_markup = Extra
     m.callbackButton('\u{1F4B8} Способы оплаты',        'pay_methods'),
     m.urlButton     ('\u2754 Вопросы',                  'https://t.me/domonline_rf'),
     m.callbackButton('\u2716 Назад',                    'go_start')
-  ], {columns: 2}))
+  ], {columns: 1}))
 
 const level_last_markup = Extra
   .HTML()
