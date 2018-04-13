@@ -58,6 +58,7 @@ const util        = require('util')
 // https
 const https       = require('https')
 const express     = require('express')
+const bodyParser  = require('body-parser')
 const sslCredentials = {
   key:  fs.readFileSync( path.join(__dirname, 'cert/client.key') ),
   cert: fs.readFileSync( path.join(__dirname, 'cert/client.pem') ),
@@ -134,17 +135,43 @@ httpsServer.listen(whPort, () => {
 
 // Первичный ответ на OAuth2
 var app2 = express()
+app2.use(bodyParser.json())
+
 app2.get('/oauth', function (req, res) {
   bxTools.oauthRes(req.query, localDb)
   res.send('OAuth2 data accepted.')
 })
-// База абонентов для админки
+// Врешние воздействия от админки
 app2.get('/'+dbUrl, function (req, res) {
   let resArr = []
   for (let key in localDb) {
     if (key.match(/^\d+$/)) { resArr.push(localDb[key]) }
   }
   res.send(JSON.stringify(resArr, "", 2))
+})
+app2.post('/'+dbUrl+'post', (req, res) => {
+  if (req.body) {
+    if (req.body.spam) {
+
+      for (let key in localDb) {
+        if (key.match(/^\d+$/)) {
+
+          if (localDb[key].chat) {
+            console.log(localDb[key].chat.id)
+            // для тестов только я
+            //if (localDb[key].chat.id === 65111616) {
+            //  console.log('BINGO !!!')
+              bot.telegram.sendMessage(localDb[key].chat.id, req.body.spam)
+            //}
+          }
+
+        }
+      }
+
+    }
+  }
+
+  res.send('posted')
 })
 // http
 app2.listen(oauthPort, () => {
@@ -258,8 +285,17 @@ const level_last_markup = Extra
     m.callbackButton('\u2716 Назад',    'go_start')
   ], {columns: 1}))
 
+const level_2_1_last_markup = Extra
+  .HTML()
+  .markup((m) => m.inlineKeyboard([
+    m.callbackButton('\u2716 Назад',    'abonent')
+  ], {columns: 1}))
 
-
+const level_2_2_last_markup = Extra
+  .HTML()
+  .markup((m) => m.inlineKeyboard([
+    m.callbackButton('\u2716 Назад',    'not_abonent')
+  ], {columns: 1}))
 
 
 
@@ -311,7 +347,7 @@ callbackRouter.on('not_abonent', (ctx) => {
 // level_2_1 ----------------------------------------------
 callbackRouter.on('id_change', (ctx) => {
   ctx.session.value = hears_id_change
-  ctx.editMessageText(ctx.session.value, level_last_markup).catch(() => undefined)
+  ctx.editMessageText(ctx.session.value, level_2_1_last_markup).catch(() => undefined)
 })
 
 callbackRouter.on('tarif_change', (ctx) => {
@@ -334,12 +370,12 @@ callbackRouter.on('tarif_pause', (ctx) => {
   ctx.reply('Пишем дату в формате <b>ДД-ММ-ГГГГ</b>\nСамое раннее завтра <b>'+minDateStr+'</b>', Extra.HTML()).catch(() => undefined)
   
   ctx.session.value = hears_pause_from
-  ctx.reply(ctx.session.value, level_last_markup).catch(() => undefined)
+  ctx.reply(ctx.session.value, level_2_1_last_markup).catch(() => undefined)
 })
 
 callbackRouter.on('friends_invite', (ctx) => {
   ctx.session.value = hears_friend_name
-  ctx.reply(ctx.session.value, level_last_markup).catch(() => undefined)
+  ctx.reply(ctx.session.value, level_2_1_last_markup).catch(() => undefined)
 })
 
 callbackRouter.on('engineer_search', (ctx) => {
@@ -356,7 +392,7 @@ callbackRouter.on('balance_check', (ctx) => {
 
 callbackRouter.on('yk_startInvoice', (ctx) => {
   ctx.session.value = hears_invoice_balance_sum  // go hears
-  ctx.reply(ctx.session.value, level_last_markup).catch(() => undefined)
+  ctx.reply(ctx.session.value, level_2_1_last_markup).catch(() => undefined)
 })
 
 // level_2_2 ----------------------------------------------
@@ -366,7 +402,7 @@ callbackRouter.on('tarif_info', (ctx) => {
 
 callbackRouter.on('new_abon_request', (ctx) => {
   ctx.session.value = hears_newAbon_name
-  ctx.reply(ctx.session.value, level_last_markup).catch(() => undefined)
+  ctx.reply(ctx.session.value, level_2_2_last_markup).catch(() => undefined)
 })
 
 callbackRouter.on('new_abon_addr', (ctx) => {

@@ -4,6 +4,7 @@
   "description": "telegram bot by telegraf",
   "main": "index.js",
   "dependencies": {
+    "body-parser": "^1.18.2",
     "express": "^4.16.2",
     "iconv-lite": "^0.4.19",
     "nodemailer": "^4.6.4",
