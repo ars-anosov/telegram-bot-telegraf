@@ -80,9 +80,8 @@ module.exports = function(ctx, ykToken, localDb) {
         let mailOptions = {
           from: '"Telegram Bot" <'+localDb.smtpData.user+'>',
           to: 'info@srgp.ru',
-          subject: 'Абонент '+ctx.state.role.do.id+' абон.плата '+ctx.session.invoice.abon+' руб.',
-          text: 'Абонент '+ctx.state.role.do.fio+', номер договора '+ctx.state.role.do.id+', телефон '+ctx.state.role.do.phone+'\n\n'+curDateStr+' средствами Telegram-бота сформировал платежку по Абон.плате на '+ctx.session.invoice.abon+' руб.',
-          //html: '<b>Hello world?</b>'
+          subject: 'Абон.плата '+ctx.session.invoice.abon+' руб. от telegram-id '+ctx.state.role.id+' за абонента '+ctx.state.role.do.id,
+          html: curDateStr+'<br/>\ntelegram-id: <b>'+ctx.state.role.id+'</b><br/>\nсформировал платежку по договору: <b>'+ctx.state.role.do.id+'</b> (абонент '+ctx.state.role.do.fio+', телефон '+ctx.state.role.do.phone+')<br/>\nАбон.плата: <b>'+ctx.session.invoice.abon+'</b> руб.',
         }
 
         // send mail with defined transport object
