@@ -536,7 +536,7 @@ bot.hears(/.*/, (ctx) => {
         if (parseInt(ctx.message.text) >= 100) {
           ctx.session.invoice = {}
           ctx.session.invoice.abon = ctx.message.text
-          yk_sendInvoice(ctx, ykToken)
+          yk_sendInvoice(ctx, ykToken, localDb)
         }
         else {
           ctx.session.value = 'Не прошло! Минимальная сумма 100 ₽'
