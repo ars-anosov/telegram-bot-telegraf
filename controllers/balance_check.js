@@ -1,6 +1,9 @@
 'use strict';
 
-const request = require('request')
+const fs          = require('fs')
+const path        = require('path')
+
+const request     = require('request')
 // curl -d "request_type=SRGP_API_DOG_BALANCE&dog_id=01810413042017" -H "Content-Type: application/x-www-form-urlencoded" -X POST http://89.188.160.0:32180
 // curl -d "request_type=SRGP_API_DOG_INFO&dog_id=01810413042017" -H "Content-Type: application/x-www-form-urlencoded" -X POST http://89.188.160.0:32180
 
@@ -10,7 +13,7 @@ const request = require('request')
 
 
 
-module.exports = function(ctx, markup) {
+module.exports = function(ctx, markup, localDb) {
   console.log('\ncontroller balance_check -------------------------------------:')
   //ctx.editMessageText(new Date(), markup).catch(() => undefined)
   ctx.editMessageText('запрашиваю данные...', markup).catch(() => undefined)
@@ -40,6 +43,13 @@ module.exports = function(ctx, markup) {
       if (ctx.state.role.do.tarif_pause) {
         ctx.session.value += '\nПриостановка: <b>'+ctx.state.role.do.tarif_pause+'</b>'
       }
+
+      localDb[ctx.from.id].do.balance = resultJson[0]
+
+      fs.writeFile(path.join(__dirname, '../local_db.json'), JSON.stringify(localDb, "", 2), 'utf8', (err) => {
+        if (err) console.log(err)
+        console.log('local_db.json has been saved!')
+      })
 
       setTimeout(() => {
         console.log(ctx.session.value)

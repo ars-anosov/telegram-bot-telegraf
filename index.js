@@ -387,7 +387,7 @@ callbackRouter.on('engineer_invite', (ctx) => {
 })
 
 callbackRouter.on('balance_check', (ctx) => {
-  balance_check(ctx, level_2_1_markup)
+  balance_check(ctx, level_2_1_markup, localDb)
 })
 
 callbackRouter.on('yk_startInvoice', (ctx) => {

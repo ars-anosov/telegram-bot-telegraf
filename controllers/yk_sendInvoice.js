@@ -29,7 +29,7 @@ module.exports = function(ctx, ykToken, localDb) {
       payload: 'Абон.плата, абонент '+ctx.state.role.do.id,
       provider_data: {
         receipt: {
-          email: 'ars-anosov@yandex.ru',    // must be
+          email: ctx.state.role.do.email ? ctx.state.role.do.email : 'ya.ots2017@gmail.com',    // must be
           items: [
             {
               description: 'Абон.плата, абонент '+ctx.state.role.do.id,   // must be
@@ -80,8 +80,11 @@ module.exports = function(ctx, ykToken, localDb) {
         let mailOptions = {
           from: '"Telegram Bot" <'+localDb.smtpData.user+'>',
           to: 'info@srgp.ru',
-          subject: 'Абон.плата '+ctx.session.invoice.abon+' руб. от telegram-id '+ctx.state.role.id+' за абонента '+ctx.state.role.do.id,
-          html: curDateStr+'<br/>\ntelegram-id: <b>'+ctx.state.role.id+'</b><br/>\nсформировал платежку по договору: <b>'+ctx.state.role.do.id+'</b> (абонент '+ctx.state.role.do.fio+', телефон '+ctx.state.role.do.phone+')<br/>\nАбон.плата: <b>'+ctx.session.invoice.abon+'</b> руб.',
+          subject: 'Платежка от telegram-id '+ctx.state.role.id+' по договору '+ctx.state.role.do.id+': абон.плата '+ctx.session.invoice.abon+' руб',
+          html: curDateStr+
+            '<br/>\ntelegram-id: <b>'+ctx.state.role.id+'</b> ('+(ctx.state.role.first_name ? ctx.state.role.first_name : '')+(ctx.state.role.last_name ? ' '+ctx.state.role.last_name : '')+(ctx.state.role.username ? ', username: '+ctx.state.role.username : '')+')'+
+            '<br/>\nсформировал платежку по договору: <b>'+ctx.state.role.do.id+'</b> ('+ctx.state.role.do.fio+', телефон '+ctx.state.role.do.phone+', e-mail '+(ctx.state.role.do.email ? ctx.state.role.do.email : 'ya.ots2017@gmail.com')+', текущий баланс '+ctx.state.role.do.balance+')'+
+            '<br/>\nабон.плата: <b>'+ctx.session.invoice.abon+'</b> руб.'
         }
 
         // send mail with defined transport object
